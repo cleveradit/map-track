@@ -37,16 +37,6 @@ Each backlog item follows this format:
 1. Ganti ke `android-sdk-opengl` 13.6.1 (rekomendasi) lalu ulangi skenario crash/ANR di emulator; apakah perlu juga diuji di HP nyata sebelum diputuskan?
 2. Perlukah membatasi satu `MapView` aktif sekaligus (hindari dua renderer saat transisi navigasi)?
 
-## Bug: penghemat baterai berhenti merekam saat pengguna mulai bergerak lagi
-
-**Status:** `OPEN`
-
-**Summary:** Uji emulator 2026-10-03: setelah diam 2 menit, request turun ke 30 s `PRIORITY_BALANCED_POWER_ACCURACY` (PRD §38 Fase 5). Sesudahnya hanya satu fix datang, dan selama 70 detik berkendara 10 m/s tidak ada satu pun titik tersimpan (jarak 0 m), karena `StationaryDetector` butuh fix untuk tahu pengguna bergerak. Di emulator mode balanced tidak memberi fix GPS sama sekali; di HP nyata mode ini memakai Wi-Fi/seluler yang di jalan sering ber-accuracy > 100 m, yang diabaikan detektor dan ditolak filter, sehingga perjalanan setelah singgah bisa tidak terekam. Prioritas tinggi: kehilangan data trip.
-
-**Open questions (resolve during planning):**
-1. Mode diam tetap `HIGH_ACCURACY` dan hanya interval diperpanjang ke 30 s (revisi PRD §38 Fase 5)? Atau tambah `setMinUpdateDistanceMeters`?
-2. Perlukah Activity Recognition (transisi gerak) sebagai pemicu keluar mode diam untuk trip manual?
-
 ## Bug: peredam jitter dan penghemat baterai peka terhadap kecepatan GPS yang berisik
 
 **Status:** `OPEN`

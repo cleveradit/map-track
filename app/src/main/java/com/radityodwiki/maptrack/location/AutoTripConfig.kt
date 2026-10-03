@@ -18,7 +18,7 @@ object AutoTripConfig {
     /** An interrupted trip can be resumed when its last data is at most this old. */
     const val RESUME_MAX_GAP_MS = 60 * 60_000L
 
-    /** GPS interval while the battery saver detects the user is still. */
+    /** GPS interval while the battery saver detects the user is still (priority stays high accuracy). */
     const val STATIONARY_INTERVAL_MS = 30_000L
 
     /** Below this speed the user counts as still, for the battery saver and jitter damping. */

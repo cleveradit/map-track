@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.6 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.7 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -1385,8 +1385,8 @@ Dialog §33 mendapat tombol **Lanjutkan** di samping **Akhiri Trip**:
 
 ### Penghemat baterai
 
-- Selama tracking, bila kecepatan < `STATIONARY_SPEED_MPS` dan titik tetap dalam radius 100 m selama 2 menit, request lokasi diturunkan ke `STATIONARY_INTERVAL_MS` dengan prioritas `BALANCED_POWER_ACCURACY`.
-- Kembali ke interval normal dan `HIGH_ACCURACY` begitu titik keluar radius atau kecepatan ≥ `STATIONARY_SPEED_MPS`.
+- Selama tracking, bila kecepatan < `STATIONARY_SPEED_MPS` dan titik tetap dalam radius 100 m selama 2 menit, interval request lokasi diperpanjang ke `STATIONARY_INTERVAL_MS`. Prioritas **tetap** `HIGH_ACCURACY`: dengan `BALANCED_POWER_ACCURACY` fix datang jarang atau sangat kasar sehingga gerakan tidak terdeteksi dan sisa perjalanan tidak terekam (uji emulator, DEC-010).
+- Kembali ke interval normal begitu titik keluar radius atau kecepatan ≥ `STATIONARY_SPEED_MPS`.
 - Langganan Activity Recognition memakai Transition API (berbasis event), bukan polling.
 
 ### Skema data
@@ -2084,6 +2084,12 @@ PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, de
 ---
 
 # 45. Riwayat Revisi
+
+## v2.7 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §38 Fase 5 — Penghemat baterai | Mode diam tetap `HIGH_ACCURACY`; hanya interval yang diperpanjang ke 30 detik | Uji emulator: dengan `BALANCED_POWER_ACCURACY` perjalanan setelah singgah tidak terekam sama sekali (0 titik selama 70 detik bergerak) |
 
 ## v2.6 — 2026-10-03
 

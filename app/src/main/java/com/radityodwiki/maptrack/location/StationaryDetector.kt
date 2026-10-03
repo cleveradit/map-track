@@ -32,3 +32,14 @@ class StationaryDetector {
 
     private fun distance(a: GpsFix, b: GpsFix) = GeoDistance.meters(a.latitude, a.longitude, b.latitude, b.longitude)
 }
+
+/**
+ * Location request for a tracking session (PRD §38 Fase 5, v2.7). Still: a longer interval but
+ * still high accuracy — a balanced request yields no or very coarse fixes, so movement would never
+ * be noticed and the rest of the trip would go unrecorded (DEC-010).
+ */
+fun trackingRequest(intervalMs: Long, stationary: Boolean): LocationRequestSpec =
+    LocationRequestSpec(
+        intervalMs = if (stationary) maxOf(AutoTripConfig.STATIONARY_INTERVAL_MS, intervalMs) else intervalMs,
+        highAccuracy = true,
+    )

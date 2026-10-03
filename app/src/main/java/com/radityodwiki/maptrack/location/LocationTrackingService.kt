@@ -107,15 +107,13 @@ class LocationTrackingService : Service() {
                     delay(NOTIFICATION_REFRESH_MS)
                 }
             }
-            // Battery saver (PRD §38 Fase 5): a slower, balanced request while the user is still.
-            val normal = LocationRequestSpec(params.intervalMs, highAccuracy = true)
-            val stationary = LocationRequestSpec(AutoTripConfig.STATIONARY_INTERVAL_MS, highAccuracy = false)
+            // Battery saver (PRD §38 Fase 5, v2.7): a slower request while the user is still.
             val detector = StationaryDetector()
-            val request = MutableStateFlow(normal)
+            val request = MutableStateFlow(trackingRequest(params.intervalMs, stationary = false))
             request.flatMapLatest { container.locationTracker.fixes(it) }.collect { fix ->
                 stateHolder.state.value = TrackingState.Active(trip.id, trip.startedAt, fix)
                 container.tripRecorder.record(trip.id, fix, params.maxAccuracyMeters)
-                request.value = if (detector.onFix(fix)) stationary else normal
+                request.value = trackingRequest(params.intervalMs, detector.onFix(fix))
                 refreshNotification()
             }
         }

@@ -2,6 +2,7 @@ package com.radityodwiki.maptrack.location
 
 import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.usecase.DEG_PER_METER
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -65,5 +66,12 @@ class StationaryDetectorTest {
         detector.stayUntil(120, speed = null)
 
         assertTrue(detector.isStationary)
+    }
+
+    @Test
+    fun stillRequestKeepsHighAccuracyWithLongerInterval() {
+        assertEquals(LocationRequestSpec(5_000, highAccuracy = true), trackingRequest(5_000, stationary = false))
+        assertEquals(LocationRequestSpec(30_000, highAccuracy = true), trackingRequest(5_000, stationary = true))
+        assertEquals(LocationRequestSpec(30_000, highAccuracy = true), trackingRequest(30_000, stationary = true))
     }
 }

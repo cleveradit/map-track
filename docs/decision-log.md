@@ -111,3 +111,13 @@ Entry format (4 fields):
 
 **Tickets:** TICKET-031
 
+## DEC-010 — Penghemat baterai tetap memakai GPS high accuracy saat diam
+
+**Decision:** Saat `StationaryDetector` mendeteksi diam, request lokasi hanya diperpanjang intervalnya ke 30 detik (`trackingRequest`), dengan prioritas tetap `PRIORITY_HIGH_ACCURACY`. PRD direvisi ke v2.7.
+
+**Why:** Desain awal PRD menurunkan prioritas ke `BALANCED_POWER_ACCURACY`. Uji emulator 2026-10-03: setelah masuk mode diam hanya satu fix datang dan selama 70 detik berkendara tidak ada satu titik pun tersimpan, karena detektor butuh fix akurat untuk tahu pengguna bergerak. Di HP nyata mode balanced memakai Wi-Fi/seluler yang di jalan sering ber-accuracy > 100 m (diabaikan detektor, ditolak filter), sehingga risikonya sama: sisa trip hilang.
+
+**Impact:** Penghematan baterai saat diam lebih kecil (GPS tetap aktif, hanya lebih jarang). Jeda deteksi gerak ≤ 30 detik; jarak selama jeda itu garis lurus. PRD Fase 9 juga merencanakan `BALANCED_POWER_ACCURACY` untuk mode sharing saja — tinjau ulang saat Fase 9 direncanakan.
+
+**Tickets:** TICKET-035
+

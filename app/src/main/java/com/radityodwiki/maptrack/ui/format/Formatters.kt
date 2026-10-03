@@ -59,6 +59,10 @@ fun formatDuration(durationMs: Long): String {
     return if (hours > 0) "$hours jam $minutes menit" else "$minutes menit"
 }
 
+/** Acceleration test times, e.g. "6.94 s"; "—" when the target was not reached. */
+fun formatSeconds(ms: Long?): String =
+    if (ms == null) "—" else String.format(Locale.US, "%.2f s", ms / 1000.0)
+
 /** Location accuracy on Home, e.g. "± 6 meter" or "± 20 ft" (PRD §7.1). */
 fun formatAccuracy(accuracyMeters: Float?, unit: DistanceUnit = DistanceUnit.METRIC): String = when {
     accuracyMeters == null -> "—"

@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.radityodwiki.maptrack.R
+import com.radityodwiki.maptrack.ui.acceleration.AccelerationScreen
 import com.radityodwiki.maptrack.ui.history.HistoryScreen
 import com.radityodwiki.maptrack.ui.home.HomeScreen
 import com.radityodwiki.maptrack.ui.places.PlaceDetailScreen
@@ -41,6 +42,7 @@ object Routes {
     const val HISTORY = "history"
     const val PLACES = "places"
     const val SETTINGS = "settings"
+    const val ACCELERATION = "acceleration"
     const val TRIP_DETAIL = "trip/{${TripDetailViewModel.ARG_TRIP_ID}}"
 
     const val PLACE_DETAIL = "place/{${PlaceDetailViewModel.ARG_PLACE_ID}}"
@@ -100,7 +102,13 @@ fun MapTrackNavHost() {
             startDestination = Routes.HOME,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Routes.HOME) { HomeScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) }) }
+            composable(Routes.HOME) {
+                HomeScreen(
+                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                    onOpenAcceleration = { navController.navigate(Routes.ACCELERATION) },
+                )
+            }
+            composable(Routes.ACCELERATION) { AccelerationScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.SETTINGS) { SettingsScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.HISTORY) {
                 HistoryScreen(onTripClick = { tripId -> navController.navigate(Routes.tripDetail(tripId)) })

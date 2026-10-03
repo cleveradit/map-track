@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.preferencesDataStore
 import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
+import com.radityodwiki.maptrack.data.repository.AccelerationRepository
 import com.radityodwiki.maptrack.data.repository.PlaceRepository
 import com.radityodwiki.maptrack.data.repository.TripRepository
 import com.radityodwiki.maptrack.data.settings.SettingsRepository
@@ -42,6 +43,8 @@ class AppContainer(context: Context) {
     val tripRepository: TripRepository by lazy { TripRepository(database) }
 
     val placeRepository: PlaceRepository by lazy { PlaceRepository(database) }
+
+    val accelerationRepository: AccelerationRepository by lazy { AccelerationRepository(database) }
 
     val settingsRepository: SettingsRepository by lazy { SettingsRepository(appContext.settingsDataStore) }
 

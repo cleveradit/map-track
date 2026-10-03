@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.5 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.6 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -33,6 +33,7 @@ Tujuan aplikasi adalah memungkinkan pengguna:
 13. Mencatat perjalanan secara otomatis tanpa menekan Start.
 14. Membackup data perjalanan ke cloud dan memakainya di perangkat lain.
 15. Membuat grup dan berbagi lokasi secara realtime dengan anggota grup.
+16. Mengukur waktu akselerasi kendaraan (0–100/200/300/400/500 m dan 0–100 km/jam).
 
 ---
 
@@ -149,7 +150,7 @@ Project dikerjakan sampai produk penuh dalam 9 fase berurutan.
 | 2 | Place Detection | Deteksi tempat singgah (visit) | Tidak |
 | 3 | Saved Places | Tempat bernama milik pengguna | Tidak |
 | 4 | Offline Map & Settings | Cache peta offline, halaman Settings | Tidak |
-| 5 | Automatic Trip & Tracking Improvements | Trip otomatis, lanjutkan trip terputus, peredam jitter | Tidak |
+| 5 | Automatic Trip & Tracking Improvements | Trip otomatis, lanjutkan trip terputus, peredam jitter, uji akselerasi | Tidak |
 | 6 | Account | Backend, register/login, device management | Ya |
 | 7 | Cloud Backup & Sync | Backup, restore, sync antarperangkat | Ya |
 | 8 | Group | Grup, undangan, keanggotaan | Ya |
@@ -1403,6 +1404,47 @@ Migrasi Room 3 → 4: kolom `trips.source` (String, wajib, default `manual` untu
 - Interval GPS turun saat diam dan kembali normal saat bergerak.
 - Migrasi 3 → 4 dites; trip lama berlabel manual.
 
+### Uji akselerasi (tambahan v2.6)
+
+Pengguna mengukur berapa detik yang dibutuhkan dari diam untuk menempuh 100, 200, 300, 400, dan 500 m, serta untuk mencapai 100 km/jam (tujuan §2 poin 16).
+
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Letak | Halaman **Uji Akselerasi** dibuka dari Home; terpisah dari trip (tidak membuat trip, tidak menyimpan location point) | Mode ukur singkat dengan kebutuhan GPS berbeda |
+| GPS | 1 fix per detik, `HIGH_ACCURACY`, hanya selama halaman terbuka (tanpa foreground service); layar dijaga tetap menyala | Resolusi waktu cukup; battery-aware karena hanya sesaat |
+| Sumber hitungan | Kecepatan GPS (Doppler) tiap fix. Jarak = integral kecepatan terhadap waktu (trapesium), bukan selisih posisi | Posisi GPS berisik; kecepatan Doppler lebih stabil |
+| Titik nol | Fix diam terakhir sebelum kecepatan ≥ ambang mulai | Sederhana; galat ≤ 1 detik interval GPS |
+| Waktu di tiap target | Interpolasi dengan asumsi percepatan konstan di antara dua fix | Hasil per 0,01 detik walau GPS 1 Hz |
+| Satuan target | Selalu meter dan km/jam seperti yang diminta; kecepatan langsung mengikuti setting satuan | Standar uji yang dikenal pengguna |
+| Penyimpanan | Tabel lokal `acceleration_runs` (migrasi Room 4 → 5); hanya run yang selesai dengan minimal satu target tercapai | Riwayat hasil; tetap offline |
+| Keselamatan | Halaman menampilkan peringatan untuk hanya menguji di tempat aman dan legal, tanpa mengoperasikan HP saat berkendara | Tanggung jawab produk |
+
+Nilai default (`AccelerationConfig`):
+
+| Parameter | Default | Arti |
+|---|---|---|
+| `GPS_INTERVAL_MS` | 1 000 | Interval GPS selama halaman terbuka |
+| `MAX_ACCURACY_METERS` | 20 m | Siap mengukur hanya bila accuracy fix ≤ ini |
+| `STILL_SPEED_MPS` | 0,5 m/s | Di bawah ini dianggap diam |
+| `READY_STILL_MS` | 2 detik | Lama diam sebelum status Siap |
+| `START_SPEED_MPS` | 1,0 m/s | Pengukuran dimulai saat kecepatan mencapai ini |
+| `MAX_FIX_GAP_MS` | 3 detik | Jeda fix lebih lama → run gagal ("GPS terputus") |
+| `STOP_BELOW_START_MS` | 2 detik | Kecepatan di bawah ambang mulai selama ini → run selesai |
+| `MAX_RUN_MS` | 60 detik | Batas lama satu run |
+| Target jarak | 100, 200, 300, 400, 500 m | |
+| Target kecepatan | 100 km/jam | |
+
+Alur: Menunggu GPS akurat → Berhenti total dulu → **Siap** → Mengukur (kecepatan, waktu, jarak langsung) → Selesai (tabel waktu per target; target yang tidak tercapai "—") atau Gagal. Run selesai saat semua target tercapai, kendaraan berhenti, pengguna menekan Berhenti, atau batas waktu habis.
+
+Acceptance criteria:
+
+- Akselerasi konstan 4 m/s² tersimulasi menghasilkan 0–100 km/jam ±0,1 detik dari 6,94 detik dan 0–100 m ±0,1 detik dari 7,07 detik.
+- Pengukuran tidak dimulai sebelum diam ≥ 2 detik dengan accuracy ≤ 20 m (boundary).
+- Jeda GPS > 3 detik saat mengukur membuat run gagal dan tidak disimpan (failure case).
+- Target yang tidak tercapai ditampilkan "—"; hasil tersimpan dan dapat dihapus.
+- Migrasi 4 → 5 dites.
+- Tanpa izin lokasi presisi atau dengan Location mati, halaman menampilkan pesan dan tidak mengukur.
+
 ### Tidak termasuk Fase 5
 
 Driving detection sebagai fitur tersendiri (§37), deteksi moda transportasi untuk ditampilkan, start otomatis tanpa izin pengguna.
@@ -2042,6 +2084,12 @@ PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, de
 ---
 
 # 45. Riwayat Revisi
+
+## v2.6 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §2, §6, §38 Fase 5 | Tujuan 16 dan fitur Uji Akselerasi (0–100/200/300/400/500 m, 0–100 km/jam), tabel `acceleration_runs` (migrasi 4 → 5) | Permintaan user |
 
 ## v2.5 — 2026-10-03
 

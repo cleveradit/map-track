@@ -17,6 +17,7 @@ Home menampilkan peta MapLibre dengan titik posisi pengguna, status GPS, posisi,
 | Peta | `HomeMap` → `MapLibreMap` | Style OpenFreeMap `liberty`; titik biru (`CircleLayer`) di fix terakhir |
 | Kamera | `cameraActionFor` | Fix pertama: zoom 16; berikutnya mengikuti (bila setting `map_follow_location` aktif); berhenti mengikuti saat pengguna menggeser peta; tombol `Ikuti posisi` mengaktifkan lagi |
 | Settings | Ikon di samping judul | Membuka [settings.md](settings.md) |
+| Uji akselerasi | Tombol di bawah bagian Tracking | Membuka [acceleration.md](acceleration.md) |
 | Tracking | `HomeUiState.activeTrip` (trip `active` di DB) | `● Aktif` + durasi + Stop, atau `Tidak aktif` + Start |
 | Trip terputus | `HomeUiState.interruptedTrip` | Dialog tak bisa ditutup (jam mulai, data terakhir, `Akhiri Trip`, dan `Lanjutkan` bila data terakhir ≤ 60 menit) + status `Terputus` |
 | Pesan error Start | `HomeUiState.startError` | Lihat [tracking.md](tracking.md) |

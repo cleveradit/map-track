@@ -133,4 +133,19 @@ Data lokasi hanya disimpan di perangkat.</string>
     <string name="auto_trip_background_rationale">Agar trip dapat dimulai saat aplikasi tertutup, pilih \"Izinkan sepanjang waktu\" untuk lokasi. Data lokasi tetap hanya disimpan di perangkat.</string>
     <string name="auto_trip_denied">Izin tidak diberikan, sehingga trip otomatis tetap nonaktif. Tracking manual tetap berfungsi.</string>
     <string name="auto_trip_failed">Trip otomatis gagal diaktifkan. Coba lagi.</string>
+    <string name="acceleration_title">Uji akselerasi</string>
+    <string name="acceleration_safety">Uji hanya di tempat aman dan sesuai hukum. Pasang HP di dudukan; jangan mengoperasikannya saat berkendara.</string>
+    <string name="acceleration_need_permission">Izin lokasi akurat diperlukan. Izinkan terlebih dahulu dari halaman Home.</string>
+    <string name="acceleration_waiting_gps">Menunggu sinyal GPS akurat…</string>
+    <string name="acceleration_waiting_still">Berhenti total dulu…</string>
+    <string name="acceleration_ready">Siap — mulai berakselerasi</string>
+    <string name="acceleration_running">Mengukur…</string>
+    <string name="acceleration_finished">Selesai</string>
+    <string name="acceleration_invalid">Gagal: sinyal GPS terputus</string>
+    <string name="acceleration_distance_target">0–%1$d m</string>
+    <string name="acceleration_speed_target">0–100 km/jam</string>
+    <string name="acceleration_stop">Berhenti</string>
+    <string name="acceleration_restart">Ulangi</string>
+    <string name="acceleration_history">Riwayat hasil</string>
+    <string name="acceleration_max_speed">Kecepatan maksimum %1$s</string>
 </resources>

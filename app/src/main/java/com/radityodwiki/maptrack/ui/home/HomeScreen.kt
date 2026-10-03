@@ -54,6 +54,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onOpenSettings: () -> Unit,
+    onOpenAcceleration: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory),
 ) {
@@ -157,6 +158,10 @@ fun HomeScreen(
             onEndInterrupted = viewModel::endInterruptedTrip,
             onResumeInterrupted = viewModel::resumeInterruptedTrip,
         )
+
+        OutlinedButton(onClick = onOpenAcceleration, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.acceleration_title))
+        }
 
         state.interruptedTrip?.let { interrupted ->
             InterruptedTripDialog(

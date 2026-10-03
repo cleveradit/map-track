@@ -60,4 +60,10 @@ class FormattersTest {
     fun imperialAccuracy() {
         assertEquals("± 20 ft", formatAccuracy(6f, DistanceUnit.IMPERIAL))
     }
+
+    @Test
+    fun seconds() {
+        assertEquals("6.94 s", formatSeconds(6_944))
+        assertEquals("—", formatSeconds(null))
+    }
 }

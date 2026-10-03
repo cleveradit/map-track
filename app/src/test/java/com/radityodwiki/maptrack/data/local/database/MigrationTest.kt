@@ -78,7 +78,7 @@ class MigrationTest {
             assertEquals(listOf(2000L, 3000L), database.locationPointDao().getForTrip("done").map { it.recordedAt })
             assertEquals(0, database.visitDao().getForTrip("done").size)
             assertEquals(listOf("done"), database.tripDao().getCompletedIdsWithVisitVersionBelow(1))
-            assertEquals(4, database.openHelper.readableDatabase.version)
+            assertEquals(5, database.openHelper.readableDatabase.version)
         } finally {
             database.close()
             context.deleteDatabase(dbName)
@@ -110,7 +110,7 @@ class MigrationTest {
             assertEquals(2, database.locationPointDao().countForTrip("done"))
             assertEquals(listOf(2000L), database.visitDao().getForTrip("done").map { it.arrivedAt })
             assertEquals(emptyList<Any>(), database.placeDao().observeAll().first())
-            assertEquals(4, database.openHelper.readableDatabase.version)
+            assertEquals(5, database.openHelper.readableDatabase.version)
         } finally {
             database.close()
             context.deleteDatabase(dbName)
@@ -146,7 +146,27 @@ class MigrationTest {
             assertEquals(1, database.locationPointDao().countForTrip("done"))
             assertEquals(1, database.visitDao().getForTrip("done").size)
             assertEquals("Rumah", database.placeDao().getById("p")!!.name)
-            assertEquals(4, database.openHelper.readableDatabase.version)
+            assertEquals(5, database.openHelper.readableDatabase.version)
+        } finally {
+            database.close()
+            context.deleteDatabase(dbName)
+        }
+    }
+
+    @Test
+    fun migrate4To5_addsEmptyAccelerationRuns() = runTest {
+        createDatabase(4) {
+            execSQL(
+                "INSERT INTO trips (id, started_at, ended_at, distance_meters, average_speed, max_speed, status, updated_at, visit_detection_version, source) " +
+                    "VALUES ('done', 1000, 900000, 50.0, 0.1, 1.0, 'completed', 900000, 1, 'auto')",
+            )
+        }
+
+        val database = openCurrent()
+        try {
+            assertEquals("auto", database.tripDao().getById("done")!!.source)
+            assertEquals(emptyList<Any>(), database.accelerationRunDao().observeAll().first())
+            assertEquals(5, database.openHelper.readableDatabase.version)
         } finally {
             database.close()
             context.deleteDatabase(dbName)

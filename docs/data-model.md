@@ -4,10 +4,10 @@
 
 | Storage | Isi | Definisi |
 |---|---|---|
-| Room database `map_track.db` (versi 4) | Trip, location point, visit, dan tempat | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
+| Room database `map_track.db` (versi 5) | Trip, location point, visit, tempat, dan hasil uji akselerasi | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
 | DataStore Preferences `settings` | Setting pengguna (Fase 4): `tracking_interval_ms`, `accuracy_threshold_m`, `distance_unit`, `map_follow_location`, `auto_trip_enabled`, `auto_trip_include_walking`, `auto_trip_revoked_notice`; lihat [settings.md](features/settings.md) | `app/src/main/java/com/radityodwiki/maptrack/data/settings/SettingsRepository.kt` |
 | Cache tile MapLibre | Ambient cache tile peta, maks. 200 MB (`MapConfig.MAP_CACHE_MAX_BYTES`); dikelola MapLibre, bukan Room | `app/src/main/java/com/radityodwiki/maptrack/ui/map/MapCache.kt` |
-| Skema terekspor | Snapshot skema per versi (`1.json`–`4.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
+| Skema terekspor | Snapshot skema per versi (`1.json`–`5.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
 
 Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dalam meter.
 
@@ -18,6 +18,7 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | `trips` | Satu sesi tracking beserta statistik akhirnya | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/TripEntity.kt` |
 | `location_points` | Titik GPS yang lolos filter, milik satu trip | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/LocationPointEntity.kt` |
 | `places` | Tempat bernama milik pengguna (sync-ready) | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/PlaceEntity.kt` |
+| `acceleration_runs` | Hasil uji akselerasi; lokal, tidak disinkronkan | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/AccelerationRunEntity.kt` |
 | `visits` | Tempat singgah satu trip; data turunan dari `location_points`, dapat dihitung ulang | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/VisitEntity.kt` |
 
 ## Key fields
@@ -53,6 +54,12 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | `places` | `radius_meters` | REAL | Wajib, 50–1 000 |
 | `places` | `created_at` | INTEGER | Wajib |
 | `places` | `updated_at` | INTEGER | Wajib, diperbarui setiap `updatePlace` |
+| `acceleration_runs` | `id` | INTEGER | Primary key auto-increment |
+| `acceleration_runs` | `started_at` | INTEGER | Wajib, epoch ms titik nol |
+| `acceleration_runs` | `time_100m_ms` … `time_500m_ms` | INTEGER? | ms dari titik nol; `NULL` = target tidak tercapai |
+| `acceleration_runs` | `speed_at_100m_mps` … `speed_at_500m_mps` | REAL? | Kecepatan saat lewat target |
+| `acceleration_runs` | `time_0_100_kmh_ms` | INTEGER? | ms ke 100 km/jam |
+| `acceleration_runs` | `max_speed_mps` | REAL | Wajib |
 
 ## Relations and enums
 
@@ -72,3 +79,4 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | 1 → 2 (Fase 2) | `AutoMigration(from = 1, to = 2)` | Tabel `visits`; kolom `trips.visit_detection_version INTEGER NOT NULL DEFAULT 0`. Tidak ada baris yang diubah | `MigrationTest` (lihat [DEC-004](decision-log.md)) |
 | 2 → 3 (Fase 3) | `AutoMigration(from = 2, to = 3)` | Tabel `places`. Tidak ada baris yang diubah | `MigrationTest.migrate2To3_*` |
 | 3 → 4 (Fase 5) | `AutoMigration(from = 3, to = 4)` | Kolom `trips.source TEXT NOT NULL DEFAULT 'manual'` | `MigrationTest.migrate3To4_*` |
+| 4 → 5 (Fase 5, v2.6) | `AutoMigration(from = 4, to = 5)` | Tabel `acceleration_runs` | `MigrationTest.migrate4To5_*` |

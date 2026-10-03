@@ -20,6 +20,9 @@ interface LocationPointDao {
     @Query("SELECT * FROM location_points WHERE trip_id = :tripId ORDER BY recorded_at ASC")
     fun observeForTrip(tripId: String): Flow<List<LocationPointEntity>>
 
+    @Query("SELECT * FROM location_points WHERE trip_id = :tripId AND recorded_at >= :since ORDER BY recorded_at ASC")
+    suspend fun getForTripSince(tripId: String, since: Long): List<LocationPointEntity>
+
     @Query("SELECT * FROM location_points WHERE trip_id = :tripId ORDER BY recorded_at DESC LIMIT 1")
     suspend fun getLast(tripId: String): LocationPointEntity?
 

@@ -1,5 +1,6 @@
 package com.radityodwiki.maptrack.ui.format
 
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.location.TrackingConfig
 import java.time.Instant
 import java.time.ZoneId
@@ -8,27 +9,48 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val MPS_TO_KMH = 3.6
-private const val UNKNOWN_SPEED = "— km/h"
+private const val MPS_TO_MPH = 2.236936
+private const val METERS_TO_FEET = 3.28084
+private const val METERS_PER_MILE = 1_609.344
+
+/** Below this many miles, imperial distances are shown in feet. */
+private const val MIN_MILES = 0.1
+
+fun speedUnitLabel(unit: DistanceUnit): String = if (unit == DistanceUnit.METRIC) "km/h" else "mph"
+
+/** Converts a stored m/s speed to the display unit (Rule 2: storage never changes). */
+fun Double.toDisplaySpeed(unit: DistanceUnit): Double =
+    this * if (unit == DistanceUnit.METRIC) MPS_TO_KMH else MPS_TO_MPH
 
 /** Current speed on Home and in the notification (PRD §14). */
-fun formatCurrentSpeed(speedMps: Float?, fixTime: Long?, now: Long): String {
-    if (fixTime == null || now - fixTime > TrackingConfig.STALE_FIX_MS) return UNKNOWN_SPEED
-    return formatSpeedKmh(speedMps?.toDouble())
+fun formatCurrentSpeed(speedMps: Float?, fixTime: Long?, now: Long, unit: DistanceUnit = DistanceUnit.METRIC): String {
+    if (fixTime == null || now - fixTime > TrackingConfig.STALE_FIX_MS) return "— ${speedUnitLabel(unit)}"
+    return formatSpeed(speedMps?.toDouble(), unit)
 }
 
-fun formatSpeedKmh(speedMps: Double?): String {
-    if (speedMps == null) return UNKNOWN_SPEED
-    val kmh = speedMps * MPS_TO_KMH
-    if (kmh < TrackingConfig.STATIONARY_SPEED_KMH) return "0 km/h"
-    return "${kmh.roundToInt()} km/h"
+/** Speeds below [TrackingConfig.STATIONARY_SPEED_KMH] show as 0 in either unit. */
+fun formatSpeed(speedMps: Double?, unit: DistanceUnit = DistanceUnit.METRIC): String {
+    val label = speedUnitLabel(unit)
+    if (speedMps == null) return "— $label"
+    if (speedMps * MPS_TO_KMH < TrackingConfig.STATIONARY_SPEED_KMH) return "0 $label"
+    return "${speedMps.toDisplaySpeed(unit).roundToInt()} $label"
 }
 
-fun formatDistance(meters: Double): String =
-    if (meters < 1000) {
+fun formatDistance(meters: Double, unit: DistanceUnit = DistanceUnit.METRIC): String {
+    if (unit == DistanceUnit.IMPERIAL) {
+        val miles = meters / METERS_PER_MILE
+        return if (miles < MIN_MILES) {
+            "${(meters * METERS_TO_FEET).roundToInt()} ft"
+        } else {
+            String.format(Locale.US, "%.1f mi", miles)
+        }
+    }
+    return if (meters < 1000) {
         "${meters.roundToInt()} m"
     } else {
         String.format(Locale.US, "%.1f km", meters / 1000)
     }
+}
 
 fun formatDuration(durationMs: Long): String {
     val totalMinutes = durationMs / 60_000
@@ -37,9 +59,12 @@ fun formatDuration(durationMs: Long): String {
     return if (hours > 0) "$hours jam $minutes menit" else "$minutes menit"
 }
 
-/** Location accuracy on Home, e.g. "± 6 meter" (PRD §7.1). */
-fun formatAccuracy(accuracyMeters: Float?): String =
-    if (accuracyMeters == null) "—" else "± ${accuracyMeters.roundToInt()} meter"
+/** Location accuracy on Home, e.g. "± 6 meter" or "± 20 ft" (PRD §7.1). */
+fun formatAccuracy(accuracyMeters: Float?, unit: DistanceUnit = DistanceUnit.METRIC): String = when {
+    accuracyMeters == null -> "—"
+    unit == DistanceUnit.IMPERIAL -> "± ${(accuracyMeters * METERS_TO_FEET).roundToInt()} ft"
+    else -> "± ${accuracyMeters.roundToInt()} meter"
+}
 
 private val INDONESIAN: Locale = Locale.forLanguageTag("id-ID")
 private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", INDONESIAN)

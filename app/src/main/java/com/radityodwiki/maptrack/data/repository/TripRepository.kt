@@ -7,6 +7,7 @@ import com.radityodwiki.maptrack.data.local.entity.toDomain
 import com.radityodwiki.maptrack.data.local.entity.toEntity
 import com.radityodwiki.maptrack.domain.model.LocationPoint
 import com.radityodwiki.maptrack.domain.model.Trip
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 import com.radityodwiki.maptrack.domain.model.Visit
 import com.radityodwiki.maptrack.domain.usecase.PlaceDetectionConfig
@@ -32,7 +33,7 @@ class TripRepository(
     private val visitDao = database.visitDao()
 
     /** Creates a new active trip. Fails if another trip is still active (PRD §8.1). */
-    suspend fun startTrip(): Result<Trip> = database.withTransaction {
+    suspend fun startTrip(source: TripSource = TripSource.MANUAL): Result<Trip> = database.withTransaction {
         val active = tripDao.getActive()
         if (active != null) {
             Result.failure(ActiveTripExistsException(active.id))
@@ -47,6 +48,7 @@ class TripRepository(
                 maxSpeed = null,
                 status = TripStatus.ACTIVE.dbValue,
                 updatedAt = time,
+                source = source.dbValue,
             )
             tripDao.insert(entity)
             Result.success(entity.toDomain())
@@ -159,6 +161,10 @@ class TripRepository(
         pointDao.observeForTrip(tripId).map { list -> list.map { it.toDomain() } }
 
     suspend fun getPoints(tripId: String): List<LocationPoint> = pointDao.getForTrip(tripId).map { it.toDomain() }
+
+    /** Points recorded at or after [since]; a small window for automatic-trip stop checks. */
+    suspend fun getPointsSince(tripId: String, since: Long): List<LocationPoint> =
+        pointDao.getForTripSince(tripId, since).map { it.toDomain() }
 
     suspend fun getLastPoint(tripId: String): LocationPoint? = pointDao.getLast(tripId)?.toDomain()
 

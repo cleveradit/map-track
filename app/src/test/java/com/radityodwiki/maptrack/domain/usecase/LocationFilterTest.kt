@@ -49,4 +49,13 @@ class LocationFilterTest {
         val candidate = testPoint(latitude = 150 * DEG_PER_METER, recordedAt = 15_000)
         assertNull(LocationFilter.evaluate(candidate, previous))
     }
+
+    @Test
+    fun customAccuracyThresholdBoundary() {
+        assertNull(LocationFilter.evaluate(testPoint(accuracy = 20.0f), null, maxAccuracyMeters = 20f))
+        assertEquals(
+            RejectReason.POOR_ACCURACY,
+            LocationFilter.evaluate(testPoint(accuracy = 20.1f), null, maxAccuracyMeters = 20f),
+        )
+    }
 }

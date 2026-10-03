@@ -23,7 +23,7 @@ All AI agents MUST read and follow these rules before proposing or implementing 
 | Background | Android Foreground Service (tracking, live sharing); WorkManager for sync from Phase 7 |
 | Database | Room (SQLite) |
 | Settings | Constants in source code (Phase 1–3); DataStore from Phase 4 |
-| Map | MapLibre (offline regions via MapLibre Offline from Phase 4) |
+| Map | MapLibre (offline via MapLibre ambient tile cache from Phase 4; no region downloads — PRD v2.4) |
 | Activity detection (Phase 5) | Activity Recognition Transition API, only for opt-in automatic trips |
 | Networking (Phase 6+) | Retrofit + OkHttp + kotlinx.serialization |
 | Backend (Phase 6+) | Laravel + PostgreSQL + Redis + Laravel Reverb (realtime), Sanctum token auth (PRD §38 Fase 6); exact versions and VPS provider decided in the first Phase 6 ticket |

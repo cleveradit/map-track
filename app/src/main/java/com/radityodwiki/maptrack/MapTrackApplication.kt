@@ -11,5 +11,6 @@ class MapTrackApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
         container.startVisitBackfill()
+        container.reconcileAutoTrip()
     }
 }

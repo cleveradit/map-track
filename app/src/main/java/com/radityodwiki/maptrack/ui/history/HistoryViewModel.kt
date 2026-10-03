@@ -7,17 +7,24 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.radityodwiki.maptrack.MapTrackApplication
 import com.radityodwiki.maptrack.data.repository.TripRepository
+import com.radityodwiki.maptrack.domain.model.AppSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HistoryViewModel(private val repository: TripRepository) : ViewModel() {
+class HistoryViewModel(
+    private val repository: TripRepository,
+    settings: Flow<AppSettings> = flowOf(AppSettings.DEFAULT),
+) : ViewModel() {
 
     /** Newest first; null while the first query is loading. */
-    val items: StateFlow<List<HistoryItem>?> = repository.observeTrips()
-        .map { trips -> trips.map { it.toHistoryItem() } }
+    val items: StateFlow<List<HistoryItem>?> = combine(repository.observeTrips(), settings) { trips, settings ->
+        trips.map { it.toHistoryItem(settings.distanceUnit) }
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Active trips are refused by the repository and stay in the list. */
@@ -29,7 +36,7 @@ class HistoryViewModel(private val repository: TripRepository) : ViewModel() {
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as MapTrackApplication).container
-                HistoryViewModel(container.tripRepository)
+                HistoryViewModel(container.tripRepository, container.settingsRepository.settings)
             }
         }
     }

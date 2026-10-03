@@ -78,7 +78,7 @@ class MigrationTest {
             assertEquals(listOf(2000L, 3000L), database.locationPointDao().getForTrip("done").map { it.recordedAt })
             assertEquals(0, database.visitDao().getForTrip("done").size)
             assertEquals(listOf("done"), database.tripDao().getCompletedIdsWithVisitVersionBelow(1))
-            assertEquals(3, database.openHelper.readableDatabase.version)
+            assertEquals(4, database.openHelper.readableDatabase.version)
         } finally {
             database.close()
             context.deleteDatabase(dbName)
@@ -110,7 +110,43 @@ class MigrationTest {
             assertEquals(2, database.locationPointDao().countForTrip("done"))
             assertEquals(listOf(2000L), database.visitDao().getForTrip("done").map { it.arrivedAt })
             assertEquals(emptyList<Any>(), database.placeDao().observeAll().first())
-            assertEquals(3, database.openHelper.readableDatabase.version)
+            assertEquals(4, database.openHelper.readableDatabase.version)
+        } finally {
+            database.close()
+            context.deleteDatabase(dbName)
+        }
+    }
+
+    @Test
+    fun migrate3To4_marksExistingTripsManual() = runTest {
+        createDatabase(3) {
+            execSQL(
+                "INSERT INTO trips (id, started_at, ended_at, distance_meters, average_speed, max_speed, status, updated_at, visit_detection_version) " +
+                    "VALUES ('done', 1000, 900000, 50.0, 0.1, 1.0, 'completed', 900000, 1)",
+            )
+            execSQL(
+                "INSERT INTO location_points (trip_id, latitude, longitude, accuracy, speed, bearing, altitude, recorded_at) " +
+                    "VALUES ('done', -7.78, 110.36, 5.0, 0.0, NULL, NULL, 2000)",
+            )
+            execSQL(
+                "INSERT INTO visits (trip_id, arrived_at, departed_at, center_latitude, center_longitude, point_count) " +
+                    "VALUES ('done', 2000, 602000, -7.78, 110.36, 2)",
+            )
+            execSQL(
+                "INSERT INTO places (id, name, latitude, longitude, radius_meters, created_at, updated_at) " +
+                    "VALUES ('p', 'Rumah', -7.78, 110.36, 100.0, 5, 6)",
+            )
+        }
+
+        val database = openCurrent()
+        try {
+            val trip = database.tripDao().getById("done")!!
+            assertEquals("manual", trip.source)
+            assertEquals(900000L, trip.updatedAt)
+            assertEquals(1, database.locationPointDao().countForTrip("done"))
+            assertEquals(1, database.visitDao().getForTrip("done").size)
+            assertEquals("Rumah", database.placeDao().getById("p")!!.name)
+            assertEquals(4, database.openHelper.readableDatabase.version)
         } finally {
             database.close()
             context.deleteDatabase(dbName)

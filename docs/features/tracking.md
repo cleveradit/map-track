@@ -10,20 +10,22 @@ Pengguna memulai dan menghentikan trip dari Home. Selama trip aktif, `LocationTr
 
 | Langkah | Komponen | Detail |
 |---|---|---|
-| Start | `TrackingController.start()` | Cek izin presisi → cek Location → `TripRepository.startTrip()` → `AndroidTrackingServiceLauncher.start(tripId)` |
+| Start | `TrackingController.start(source)` | Cek izin presisi → cek Location → snapshot `TrackingParams` → `TripRepository.startTrip(source)` → `AndroidTrackingServiceLauncher.start(tripId, params)`; `source = auto` dari [auto-trip.md](auto-trip.md) |
 | Rekam | `LocationTrackingService` → `TripRecorder.record()` | Pembanding filter = titik tersimpan terakhir (cache di memori, fallback ke DB) |
 | State UI | `TrackingStateHolder` | `Idle` atau `Active(tripId, startedAt, lastFix)` |
 | Notification | `TrackingNotification`, `trackingNotificationText()` | Diperbarui setiap fix dan setiap 5 detik; aksi Stop; tap membuka app |
 | Stop | `TrackingController.stop()` | Service berjalan → `ACTION_STOP`; tidak berjalan → `TripRecorder.finishInterrupted()` |
-| Recovery | `interruptedTripOf()`, dialog di Home | Trip `active` tanpa service → dialog PRD §33 → `endInterruptedTrip()`; `ended_at` = titik terakhir atau `started_at` |
-| Selesai | `TripRepository.finishTrip()` | Statistik dan visit ([place-detection.md](place-detection.md)) dari titik tersimpan dalam satu transaksi, `ended_at` = waktu Stop, idempoten |
+| Recovery | `interruptedTripOf()`, dialog di Home | Trip `active` tanpa service → dialog PRD §33 → `endInterruptedTrip()` (`ended_at` = titik terakhir atau `started_at`) atau **Lanjutkan** (`TrackingController.resume`) bila data terakhir ≤ 60 menit (`canResumeTrip`) |
+| Penghemat baterai | `StationaryDetector` di service | Diam 2 menit dalam 100 m tanpa kecepatan ≥ 0,5 m/s → request 30 s `BALANCED_POWER_ACCURACY`; keluar radius atau bergerak → interval trip + `HIGH_ACCURACY` |
+| Selesai | `TripRepository.finishTrip()` | Statistik (jarak dengan titik jangkar, `TripStatisticsCalculator.anchoredDistance`) dan visit ([place-detection.md](place-detection.md)) dari titik tersimpan dalam satu transaksi, `ended_at` = waktu Stop, idempoten |
 
 | `StartTrackingError` | Penyebab | Pesan di Home |
 |---|---|---|
 | `PERMISSION_MISSING` | Izin lokasi presisi tidak ada | PRD §30 |
 | `LOCATION_DISABLED` | Location service mati | PRD §29 |
 | `TRIP_ALREADY_ACTIVE` | Ada trip `active` di DB | Minta tekan Stop Tracking |
-| `SERVICE_START_FAILED` | `startForegroundService` melempar exception | Trip baru langsung diselesaikan; minta coba lagi |
+| `SERVICE_START_FAILED` | `startForegroundService` melempar exception | Start: trip baru langsung diselesaikan. Lanjutkan: trip tetap terputus. Minta coba lagi |
+| `RESUME_EXPIRED` | Lanjutkan setelah > 60 menit atau trip tidak lagi `active` | Hanya bisa diakhiri |
 
 | Teks notification | Kondisi |
 |---|---|
@@ -37,10 +39,15 @@ Pengguna memulai dan menghentikan trip dari Home. Selama trip aktif, `LocationTr
 - `TrackingController.start()` men-set state `Active` sebelum service berjalan agar trip baru tidak terdeteksi terputus ([DEC-001](../decision-log.md)).
 - Selama tracking, Home memakai `lastFix` dari `TrackingStateHolder` dan tidak membuka request lokasi kedua.
 - Izin notifikasi diminta saat Start di Android 13+. Bila ditolak tracking tetap berjalan, tetapi notification bisa tidak terlihat.
+- Lanjutkan men-set state `Active` sebelum service berjalan (DEC-001) dan memakai snapshot Settings baru. Jeda tidak diisi titik: jarak titik terakhir → titik pertama sesudahnya dihitung garis lurus.
+- Jarak memakai titik jangkar (PRD §38 Fase 5): titik hanya menambah jarak bila lebih jauh dari jangkar daripada accuracy keduanya, dan titik dengan kecepatan GPS < 0,5 m/s dilewati ([DEC-008](../decision-log.md)). Statistik trip lama tidak dihitung ulang.
+- Penghemat baterai mengabaikan fix dengan accuracy > 100 m (tidak bisa membedakan diam/gerak); fix itu tetap diteruskan ke filter seperti biasa.
+- Interval lokasi dan ambang akurasi trip diambil dari Settings saat Start (snapshot `TrackingParams`, extra intent service); perubahan Settings saat trip aktif berlaku mulai trip berikutnya. Lihat [settings.md](settings.md).
 - Fix yang ditolak tidak pernah menjadi pembanding fix berikutnya; setelah GPS jump, fix berikutnya dibandingkan dengan titik tersimpan sebelum jump.
 
 ## Related
 
 - [home.md](home.md)
+- [auto-trip.md](auto-trip.md)
 - [data-model.md](../data-model.md)
 - [PRD §8, §9, §12, §16, §31–§32](../initiate-file/prd-map-track.md)

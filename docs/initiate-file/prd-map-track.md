@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.3 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.5 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -29,7 +29,7 @@ Tujuan aplikasi adalah memungkinkan pengguna:
 9. Melihat statistik perjalanan.
 10. Menggunakan fungsi utama tanpa koneksi internet.
 11. Mengetahui tempat-tempat yang disinggahi dan memberi nama tempat penting.
-12. Memakai peta tanpa internet di wilayah yang sudah diunduh.
+12. Memakai peta tanpa internet di area yang sudah pernah dibuka (cache peta).
 13. Mencatat perjalanan secara otomatis tanpa menekan Start.
 14. Membackup data perjalanan ke cloud dan memakainya di perangkat lain.
 15. Membuat grup dan berbagi lokasi secara realtime dengan anggota grup.
@@ -148,7 +148,7 @@ Project dikerjakan sampai produk penuh dalam 9 fase berurutan.
 | 1 | Core Tracking Lokal | Tracking, peta, trip, histori, statistik, recovery | Tidak |
 | 2 | Place Detection | Deteksi tempat singgah (visit) | Tidak |
 | 3 | Saved Places | Tempat bernama milik pengguna | Tidak |
-| 4 | Offline Map & Settings | Unduh wilayah peta, halaman Settings | Tidak |
+| 4 | Offline Map & Settings | Cache peta offline, halaman Settings | Tidak |
 | 5 | Automatic Trip & Tracking Improvements | Trip otomatis, lanjutkan trip terputus, peredam jitter | Tidak |
 | 6 | Account | Backend, register/login, device management | Ya |
 | 7 | Cloud Backup & Sync | Backup, restore, sync antarperangkat | Ya |
@@ -693,7 +693,7 @@ GPS tetap menjadi sumber utama koordinat.
 
 **Sumber tile:** aplikasi memakai OpenFreeMap (style `liberty`), tile vektor online publik yang tidak membutuhkan akun atau API key. Atribusi OpenFreeMap, OpenMapTiles, dan OpenStreetMap ditampilkan lewat tombol atribusi peta.
 
-**Catatan privasi:** saat mengunduh tile, server tile dapat mengetahui area peta yang sedang dilihat. Namun aplikasi tidak pernah mengirim koordinat GPS, titik lokasi, atau data trip ke server mana pun. Untuk wilayah yang sudah diunduh (Fase 4), peta tidak lagi memerlukan request tile.
+**Catatan privasi:** saat mengunduh tile, server tile dapat mengetahui area peta yang sedang dilihat. Namun aplikasi tidak pernah mengirim koordinat GPS, titik lokasi, atau data trip ke server mana pun. Untuk area yang tile-nya sudah ada di cache (Fase 4), peta dapat tampil tanpa request tile.
 
 ---
 
@@ -715,22 +715,7 @@ Map dapat tampil kosong atau hanya menampilkan resource yang sudah tersedia.
 
 ## Tahap kedua (Fase 4)
 
-Pengguna dapat mengunduh wilayah peta untuk penggunaan offline.
-
-Contoh:
-
-```text
-Offline Maps
-
-Yogyakarta
-Downloaded
-184 MB
-
-Surabaya
-Not Downloaded
-
-[ Download ]
-```
+Tile yang pernah ditampilkan disimpan di cache peta sehingga area yang sudah pernah dibuka tetap tampil tanpa internet. Tidak ada unduhan wilayah (lisensi OpenFreeMap, §38 Fase 4).
 
 ---
 
@@ -824,7 +809,6 @@ tracking_interval_ms
 accuracy_threshold_m
 distance_unit
 map_follow_location
-offline_download_wifi_only
 ```
 
 ---
@@ -1030,14 +1014,14 @@ Data yang keluar dari perangkat per fase:
 | Fase | Data yang keluar perangkat |
 |---|---|
 | 1–3 | Tidak ada, kecuali request tile peta (§22) |
-| 4 | Request tile dan unduhan wilayah peta |
+| 4 | Request tile peta (sama seperti Fase 1–3; tile yang sudah ada di cache tidak diminta ulang) |
 | 5 | Sama dengan Fase 4 |
 | 6 | Data akun (email, nama, info perangkat). Tidak ada data lokasi. |
 | 7 | Trip dan location point, **hanya** jika pengguna mengaktifkan Cloud Backup |
 | 8 | Data grup dan keanggotaan. Tidak ada data lokasi. |
 | 9 | Lokasi terkini (latitude, longitude, accuracy, waktu fix), **hanya** ke anggota grup dan **hanya** selama pengguna mengaktifkan Live Sharing. Server hanya menyimpan satu lokasi terakhir dan menghapusnya saat sharing berhenti |
 
-Request tile dan unduhan wilayah peta tidak membawa koordinat GPS maupun data trip.
+Request tile peta tidak membawa koordinat GPS maupun data trip.
 
 Aturan umum:
 
@@ -1289,31 +1273,24 @@ Deteksi Home/Work otomatis, reverse geocoding, geofence alert (§37), kategori/i
 
 ### Tujuan
 
-Peta tetap tampil tanpa internet untuk wilayah yang sudah diunduh (tujuan §2 poin 12), dan pengguna dapat mengatur parameter utama lewat halaman Settings.
+Peta tetap tampil tanpa internet untuk area yang sudah pernah dibuka (tujuan §2 poin 12), dan pengguna dapat mengatur parameter utama lewat halaman Settings.
 
 ### Keputusan
 
 | Keputusan | Nilai | Alasan |
 |---|---|---|
-| Mekanisme unduhan | MapLibre Offline (`OfflineManager`), style yang sama dengan peta online | Tanpa dependensi baru |
-| Penyimpanan metadata wilayah | Database offline MapLibre (nama, ukuran, status disimpan di metadata region), bukan Room | Satu sumber kebenaran untuk wilayah |
-| Rentang zoom unduhan | 10–14 (tile vektor overzoom di atas 14) | Cukup detail untuk jalan dan bangunan dengan ukuran wajar |
-| Batas ukuran wilayah | Maksimal 20 000 tile per wilayah (estimasi sebelum unduh) | Mencegah unduhan raksasa; ukuran ditampilkan sebelum unduh |
-| Jaringan | Setting "Unduh peta hanya via Wi-Fi", default **aktif** | Hemat kuota |
-| Proses unduhan | Berjalan selama aplikasi hidup; jika proses dihentikan, unduhan dilanjutkan saat halaman Offline Maps dibuka lagi | Tidak menambah foreground service |
-| Lisensi tile | Tiket pertama Fase 4 wajib memverifikasi bahwa OpenFreeMap mengizinkan unduhan offline. Jika tidak, tiket memilih sumber tile lain yang tanpa akun/API key dan mengizinkan offline, lalu merevisi §22 | Kepatuhan lisensi |
+| Mekanisme offline | Ambient cache MapLibre (tile yang pernah ditampilkan), batas `MapConfig.MAP_CACHE_MAX_BYTES` = 200 MB | Gratis, tanpa dependensi baru, dan sesuai lisensi |
+| Unduhan wilayah | **Tidak ada.** Terms of Service OpenFreeMap melarang pengambilan data otomatis tanpa izin, dan unduhan wilayah meminta ribuan tile sekaligus. Sumber tile lain yang gratis tanpa API key dan jelas mengizinkan unduhan offline tidak ditemukan (verifikasi TICKET-023) | Kepatuhan lisensi; prinsip gratis |
 | Settings | DataStore Preferences (§26) | Sesuai keputusan v1.1 |
 | Perubahan setting tracking saat trip aktif | Berlaku mulai trip berikutnya; Settings menampilkan keterangan ini | Satu trip memakai parameter yang konsisten |
 
-### Offline Maps
+### Cache peta offline
 
-1. Halaman **Offline Maps** dibuka dari Settings.
-2. Tambah wilayah: pengguna menggeser/zoom peta, area yang terlihat di layar menjadi wilayah unduhan. Aplikasi menampilkan estimasi jumlah tile dan ukuran. Tombol Download nonaktif bila melebihi batas.
-3. Nama wilayah wajib (default `Wilayah <tanggal>`), 1–50 karakter.
-4. Daftar wilayah: nama, status (`Mengunduh n%`, `Terunduh`, `Gagal`, `Dijeda`), ukuran.
-5. Hapus wilayah dengan konfirmasi; ruang penyimpanan dibebaskan.
-6. Wilayah terunduh tampil tanpa internet di Home, Trip Detail, dan Tempat.
-7. Kegagalan unduhan tidak memengaruhi tracking.
+1. Setiap tile yang pernah ditampilkan disimpan otomatis di cache MapLibre (ambient cache) hingga `MapConfig.MAP_CACHE_MAX_BYTES` (200 MB). Bila penuh, tile yang paling lama tidak dipakai dibuang lebih dulu.
+2. Area yang sudah pernah dibuka di peta (Home, Trip Detail, Tempat) tetap tampil tanpa internet selama tile-nya masih ada di cache. Area yang belum pernah dibuka tampil kosong saat offline.
+3. Settings menyediakan aksi **Hapus cache peta** dengan konfirmasi; tile diunduh ulang saat peta dibuka dengan internet.
+4. Tidak ada halaman unduh wilayah: unduhan massal dari server publik OpenFreeMap tanpa izin bertentangan dengan Terms of Service-nya (larangan mengambil data secara otomatis tanpa izin). Fitur unduh wilayah dapat ditambahkan bila OpenFreeMap memberi izin tertulis.
+5. Cache peta tidak memengaruhi tracking; peta kosong tetap tidak menghentikan tracking.
 
 ### Settings
 
@@ -1323,7 +1300,6 @@ Peta tetap tampil tanpa internet untuk wilayah yang sudah diunduh (tujuan §2 po
 | `accuracy_threshold_m` | 20 m, 30 m, 50 m, 100 m | 50 m |
 | `distance_unit` | Metrik (km, km/h) / Imperial (mi, mph) | Metrik |
 | `map_follow_location` | Kamera Home mengikuti posisi: aktif/nonaktif | Aktif |
-| `offline_download_wifi_only` | aktif/nonaktif | Aktif |
 
 Aturan:
 
@@ -1335,10 +1311,9 @@ Aturan:
 
 ### Acceptance Criteria Fase 4
 
-- Pengguna dapat mengunduh wilayah, melihat daftar beserta ukurannya, dan menghapusnya.
-- Dengan mode pesawat, wilayah terunduh tetap tampil; di luar wilayah, peta kosong tetapi tracking tetap berjalan.
-- Wilayah yang melebihi 20 000 tile tidak dapat diunduh (boundary).
-- Unduhan yang terputus (jaringan hilang) berstatus gagal/dijeda dan dapat dilanjutkan (failure case).
+- Cache peta dikonfigurasi 200 MB saat peta pertama dibuat (boundary: tidak melebihi batas ini).
+- Dengan mode pesawat, area yang sebelumnya dibuka dengan internet tetap tampil; area lain kosong tetapi tracking tetap berjalan (failure case).
+- Hapus cache peta mengosongkan cache; aplikasi dan tracking tetap berjalan normal.
 - Mengubah interval saat trip aktif tidak mengubah trip yang sedang berjalan; trip berikutnya memakai interval baru.
 - Ambang accuracy baru dipakai filter §12 pada trip berikutnya.
 - Satuan imperial mengubah semua tampilan jarak dan kecepatan tanpa mengubah data tersimpan.
@@ -1346,7 +1321,7 @@ Aturan:
 
 ### Tidak termasuk Fase 4
 
-Pilihan gaya peta lain, sinkronisasi setting antarperangkat, unduhan wilayah otomatis.
+Pilihan gaya peta lain, sinkronisasi setting antarperangkat, unduhan wilayah (manual maupun otomatis).
 
 ---
 
@@ -1404,6 +1379,7 @@ Dialog §33 mendapat tombol **Lanjutkan** di samping **Akhiri Trip**:
 
 - Titik tetap disimpan semua (deteksi visit membutuhkan titik saat diam).
 - Perhitungan jarak (§17) memakai **titik jangkar**: jarak hanya ditambahkan bila jarak dari titik jangkar ke titik baru > `max(accuracy jangkar, accuracy titik baru)`; titik baru itu lalu menjadi jangkar. Titik pertama adalah jangkar awal.
+- Titik yang kecepatan GPS-nya diketahui dan < `STATIONARY_SPEED_MPS` tidak menambah jarak dan tidak menjadi jangkar. Tanpa syarat ini, simulasi diam 10 menit dengan accuracy 10–30 m tetap menambah ratusan meter (DEC-008).
 - Hanya berlaku untuk trip yang diselesaikan setelah Fase 5. Statistik trip lama tidak dihitung ulang agar histori tetap stabil.
 
 ### Penghemat baterai
@@ -2066,6 +2042,18 @@ PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, de
 ---
 
 # 45. Riwayat Revisi
+
+## v2.5 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §38 Fase 5 — Peredam jitter | Titik dengan kecepatan GPS diketahui < `STATIONARY_SPEED_MPS` (0,5 m/s) dilewati oleh perhitungan jarak jangkar | Aturan accuracy saja tidak memenuhi kriteria "< 50 m untuk diam 10 menit" pada simulasi (median ±200 m dengan drift, ±1,5 km dengan jitter acak). Kriteria asli tetap; pembuktian akhir dengan rekaman nyata di uji manual |
+
+## v2.4 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §2, §6, §22, §23, §26, §35, §38 Fase 4 | Unduhan wilayah offline diganti cache peta otomatis (ambient cache MapLibre 200 MB) + aksi Hapus cache peta; key `offline_download_wifi_only` dihapus | Terms of Service OpenFreeMap melarang pengambilan data otomatis tanpa izin; tidak ditemukan sumber tile gratis tanpa API key yang jelas mengizinkan unduhan offline. Keputusan user: opsi cache (gratis, sesuai lisensi) |
 
 ## v2.3 — 2026-10-03
 

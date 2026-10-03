@@ -20,14 +20,14 @@ class PlaceListItemTest {
 
     @Test
     fun countsVisitsAndUsesLatestDate() {
-        val item = place.toListItem(listOf(visitOn(2026, 10, 2), visitOn(2026, 9, 30)), utc)
+        val item = place.toListItem(listOf(visitOn(2026, 10, 2), visitOn(2026, 9, 30)), zone = utc)
 
         assertEquals(PlaceListItem("p", "Rumah", "100 m", 2, "2 Oktober 2026"), item)
     }
 
     @Test
     fun withoutVisits() {
-        val item = place.copy(radiusMeters = 1_000.0).toListItem(emptyList(), utc)
+        val item = place.copy(radiusMeters = 1_000.0).toListItem(emptyList(), zone = utc)
 
         assertEquals(0, item.visitCount)
         assertNull(item.lastVisitDate)

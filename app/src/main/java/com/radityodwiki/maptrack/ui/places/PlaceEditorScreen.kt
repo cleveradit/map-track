@@ -149,7 +149,7 @@ private fun EditorContent(state: PlaceEditorUiState, viewModel: PlaceEditorViewM
         }
 
         Text(
-            stringResource(R.string.place_radius, formatDistance(state.radiusMeters)),
+            stringResource(R.string.place_radius, formatDistance(state.radiusMeters, state.distanceUnit)),
             style = MaterialTheme.typography.titleMedium,
         )
         Slider(

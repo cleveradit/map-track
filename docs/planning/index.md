@@ -6,7 +6,7 @@ Status meanings (`DRAFT` / `REVIEW` / `READY` / `DONE`): see [ai-context.md §5 
 
 ## Execution Order
 
-— (Tidak ada tiket aktif. Fase 3 selesai: TICKET-017–022 di `Ticket-Implemented/`. Fase 4 `OPEN` di [backlog](../backlog.md), siap dijadikan tiket mulai TICKET-023.)
+— (Tidak ada tiket aktif. Fase 5 selesai: TICKET-027–032 di `Ticket-Implemented/`. Fase 6 menunggu keputusan backend (Laravel + VPS vs. Firebase) dan revisi PRD; lihat [backlog](../backlog.md).)
 
 ## Global Agent Rules
 

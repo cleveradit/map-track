@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.radityodwiki.maptrack.MapTrackApplication
 import com.radityodwiki.maptrack.data.repository.PlaceRepository
+import com.radityodwiki.maptrack.domain.model.AppSettings
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.domain.model.LocationPermission
 import com.radityodwiki.maptrack.domain.model.PlaceInput
 import com.radityodwiki.maptrack.domain.usecase.PlaceConfig
@@ -16,6 +18,8 @@ import com.radityodwiki.maptrack.domain.usecase.PlaceValidator
 import com.radityodwiki.maptrack.location.LocationSource
 import com.radityodwiki.maptrack.location.TrackingConfig
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +48,7 @@ data class PlaceEditorUiState(
     val message: EditorMessage? = null,
     val cameraRequest: CameraRequest? = null,
     val saved: Boolean = false,
+    val distanceUnit: DistanceUnit = DistanceUnit.METRIC,
 ) {
     val nameError: PlaceNameError? get() = PlaceValidator.nameError(name)
     val nameLength: Int get() = name.trim().let { it.codePointCount(0, it.length) }
@@ -58,6 +63,7 @@ class PlaceEditorViewModel(
     initialLongitude: Double?,
     private val placeRepository: PlaceRepository,
     private val locationSource: LocationSource,
+    settings: Flow<AppSettings> = flowOf(AppSettings.DEFAULT),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlaceEditorUiState(isEditing = placeId != null))
@@ -66,6 +72,9 @@ class PlaceEditorViewModel(
     private var locating: Job? = null
 
     init {
+        viewModelScope.launch {
+            settings.collect { current -> _uiState.update { it.copy(distanceUnit = current.distanceUnit) } }
+        }
         if (placeId != null) {
             _uiState.update { it.copy(isLoading = true) }
             viewModelScope.launch {
@@ -186,6 +195,7 @@ class PlaceEditorViewModel(
                     initialLongitude = handle.get<String>(ARG_LONGITUDE)?.toDoubleOrNull(),
                     placeRepository = container.placeRepository,
                     locationSource = container.locationTracker,
+                    settings = container.settingsRepository.settings,
                 )
             }
         }

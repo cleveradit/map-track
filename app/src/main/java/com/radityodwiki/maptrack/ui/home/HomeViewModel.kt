@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.radityodwiki.maptrack.MapTrackApplication
 import com.radityodwiki.maptrack.data.repository.TripRepository
+import com.radityodwiki.maptrack.domain.model.AppSettings
 import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.model.LocationPermission
 import com.radityodwiki.maptrack.location.LocationSource
@@ -16,6 +17,7 @@ import com.radityodwiki.maptrack.location.TrackingState
 import com.radityodwiki.maptrack.location.TrackingStateHolder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +40,7 @@ class HomeViewModel(
     private val stateHolder: TrackingStateHolder,
     private val controller: TrackingController,
     private val clock: () -> Long = System::currentTimeMillis,
+    settings: Flow<AppSettings> = flowOf(AppSettings.DEFAULT),
 ) : ViewModel() {
 
     private var permissionRequested = false
@@ -77,9 +80,14 @@ class HomeViewModel(
         trip?.let { InterruptedTrip(it.id, it.startedAt, repository.getLastPoint(it.id)?.recordedAt) }
     }
 
-    private val actionState = combine(startError, busy, interruptedTrip) { error, busy, interrupted ->
-        Triple(error, busy, interrupted)
-    }
+    private data class ActionState(
+        val error: StartTrackingError?,
+        val busy: Boolean,
+        val interrupted: InterruptedTrip?,
+        val settings: AppSettings,
+    )
+
+    private val actionState = combine(startError, busy, interruptedTrip, settings, ::ActionState)
 
     val uiState: StateFlow<HomeUiState> = combine(
         permission,
@@ -87,8 +95,19 @@ class HomeViewModel(
         ticks,
         repository.observeActiveTrip(),
         actionState,
-    ) { permission, fix, (now, enabled), activeTrip, (error, busy, interrupted) ->
-        HomeUiState(permission, enabled, fix, now, activeTrip, error, busy, interrupted)
+    ) { permission, fix, (now, enabled), activeTrip, action ->
+        HomeUiState(
+            permission = permission,
+            locationEnabled = enabled,
+            fix = fix,
+            now = now,
+            activeTrip = activeTrip,
+            startError = action.error,
+            busy = action.busy,
+            interruptedTrip = action.interrupted,
+            distanceUnit = action.settings.distanceUnit,
+            mapFollowLocation = action.settings.mapFollowLocation,
+        )
     }.stateIn(
         scope = viewModelScope,
         // Stop location updates shortly after Home leaves the screen (PRD §7.1).
@@ -111,6 +130,11 @@ class HomeViewModel(
 
     fun stopTracking() = runAction {
         controller.stop()
+    }
+
+    fun resumeInterruptedTrip() {
+        val tripId = uiState.value.interruptedTrip?.tripId ?: return
+        runAction { startError.value = controller.resume(tripId) }
     }
 
     fun endInterruptedTrip() {
@@ -148,6 +172,7 @@ class HomeViewModel(
                     repository = container.tripRepository,
                     stateHolder = container.trackingStateHolder,
                     controller = container.trackingController,
+                    settings = container.settingsRepository.settings,
                 )
             }
         }

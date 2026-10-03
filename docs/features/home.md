@@ -10,14 +10,15 @@ Home menampilkan peta MapLibre dengan titik posisi pengguna, status GPS, posisi,
 
 | Elemen | Sumber | Aturan |
 |---|---|---|
-| Kecepatan | `GpsFix.speedMps` | `formatCurrentSpeed`: `— km/h` bila tidak ada speed atau fix > 15 s; `0 km/h` bila < 1 km/h |
-| Akurasi | `GpsFix.accuracyMeters` | `formatAccuracy`: `± N meter` atau `—` |
+| Kecepatan | `GpsFix.speedMps` | `formatCurrentSpeed` dalam satuan Settings: `— km/h` bila tidak ada speed atau fix > 15 s; `0 km/h` bila < 1 km/h (imperial: mph) |
+| Akurasi | `GpsFix.accuracyMeters` | `formatAccuracy`: `± N meter` / `± N ft` atau `—` |
 | GPS | `gpsStatusOf` | `NO_PERMISSION` → `LOCATION_DISABLED` → `SEARCHING` → `ACTIVE` |
 | Posisi | `GpsFix.latitude/longitude` | 6 desimal |
 | Peta | `HomeMap` → `MapLibreMap` | Style OpenFreeMap `liberty`; titik biru (`CircleLayer`) di fix terakhir |
-| Kamera | `cameraActionFor` | Fix pertama: zoom 16; berikutnya mengikuti; berhenti mengikuti saat pengguna menggeser peta; tombol `Ikuti posisi` mengaktifkan lagi |
+| Kamera | `cameraActionFor` | Fix pertama: zoom 16; berikutnya mengikuti (bila setting `map_follow_location` aktif); berhenti mengikuti saat pengguna menggeser peta; tombol `Ikuti posisi` mengaktifkan lagi |
+| Settings | Ikon di samping judul | Membuka [settings.md](settings.md) |
 | Tracking | `HomeUiState.activeTrip` (trip `active` di DB) | `● Aktif` + durasi + Stop, atau `Tidak aktif` + Start |
-| Trip terputus | `HomeUiState.interruptedTrip` | Dialog tak bisa ditutup (jam mulai, data terakhir, `Akhiri Trip`) + status `Terputus` |
+| Trip terputus | `HomeUiState.interruptedTrip` | Dialog tak bisa ditutup (jam mulai, data terakhir, `Akhiri Trip`, dan `Lanjutkan` bila data terakhir ≤ 60 menit) + status `Terputus` |
 | Pesan error Start | `HomeUiState.startError` | Lihat [tracking.md](tracking.md) |
 
 | State permission | Tampilan |
@@ -35,7 +36,7 @@ Home menampilkan peta MapLibre dengan titik posisi pengguna, status GPS, posisi,
 - Status Location service dibaca ulang setiap detik oleh ticker ViewModel, bukan lewat broadcast.
 
 - Marker posisi digambar dari `GpsFix` Home lewat `GeoJsonSource`, bukan `LocationComponent` MapLibre, agar GPS tetap satu-satunya sumber koordinat dan tidak ada request lokasi tambahan.
-- Tanpa internet style tidak termuat dan peta kosong; status, kecepatan, dan tracking tidak terpengaruh.
+- Tanpa internet peta hanya menampilkan tile yang sudah ada di cache (area yang pernah dibuka, hingga 200 MB, `MapCache`); area lain kosong. Status, kecepatan, dan tracking tidak terpengaruh.
 - `MapLibreMap` meminta parent tidak mencegat gesture (`requestDisallowInterceptTouchEvent`) karena Home berada di `verticalScroll`.
 
 ## Related

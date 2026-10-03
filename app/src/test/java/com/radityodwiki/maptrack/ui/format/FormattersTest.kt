@@ -1,5 +1,6 @@
 package com.radityodwiki.maptrack.ui.format
 
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -37,5 +38,26 @@ class FormattersTest {
     fun accuracy() {
         assertEquals("± 6 meter", formatAccuracy(5.6f))
         assertEquals("—", formatAccuracy(null))
+    }
+
+    @Test
+    fun imperialSpeed() {
+        assertEquals("28 mph", formatCurrentSpeed(12.5f, fixTime = 1_000, now = 2_000, unit = DistanceUnit.IMPERIAL))
+        assertEquals("0 mph", formatSpeed(0.2, DistanceUnit.IMPERIAL))
+        assertEquals("— mph", formatSpeed(null, DistanceUnit.IMPERIAL))
+        assertEquals("45 km/h", formatSpeed(12.5))
+    }
+
+    @Test
+    fun imperialDistance() {
+        assertEquals("328 ft", formatDistance(100.0, DistanceUnit.IMPERIAL))
+        assertEquals("525 ft", formatDistance(160.0, DistanceUnit.IMPERIAL))
+        assertEquals("0.1 mi", formatDistance(170.0, DistanceUnit.IMPERIAL))
+        assertEquals("13.5 mi", formatDistance(21_700.0, DistanceUnit.IMPERIAL))
+    }
+
+    @Test
+    fun imperialAccuracy() {
+        assertEquals("± 20 ft", formatAccuracy(6f, DistanceUnit.IMPERIAL))
     }
 }

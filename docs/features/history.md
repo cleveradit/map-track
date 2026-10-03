@@ -24,6 +24,8 @@ Tab History menampilkan semua trip, terbaru di atas, dengan tanggal, rentang jam
 
 ## Gotchas
 
+- Trip `source = auto` diberi label "Otomatis" di bawah tanggal ([auto-trip.md](auto-trip.md)).
+
 - Tanggal dan jam memakai zona waktu perangkat saat ditampilkan; trip yang melewati tengah malam ditampilkan dengan tanggal mulai.
 - `HistoryViewModel.deleteTrip` tidak menampilkan error; trip aktif ditolak oleh `TripRepository` dan tetap muncul di daftar.
 

@@ -1,4 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<!-- Indonesian has no plural forms, so strings with %d need no <plurals>. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="PluralsCandidate">
     <string name="app_name">Map Track</string>
     <string name="nav_home">Home</string>
     <string name="nav_history">History</string>
@@ -54,7 +55,7 @@
     <string name="label_avg_speed">Kecepatan rata-rata</string>
     <string name="label_max_speed">Kecepatan maksimum</string>
     <string name="label_point_count">Jumlah titik</string>
-    <string name="speed_history_title">Histori kecepatan</string>
+    <string name="speed_history_title">Histori kecepatan (%1$s)</string>
     <string name="speed_history_empty">Belum ada data kecepatan.</string>
 
     <string name="map_follow">Ikuti posisi</string>
@@ -74,14 +75,13 @@
     <string name="place_add">Tambah tempat</string>
     <string name="place_radius">Radius %1$s</string>
     <string name="place_no_visits">Belum ada kunjungan</string>
-    <!-- Indonesian has no plural forms, so %d strings need no <plurals>. -->
-    <string name="place_visit_summary" tools:ignore="PluralsCandidate">%1$d kunjungan · terakhir %2$s</string>
+    <string name="place_visit_summary">%1$d kunjungan · terakhir %2$s</string>
     <string name="place_edit_title">Ubah tempat</string>
     <string name="place_not_found">Tempat tidak ditemukan.</string>
     <string name="save">Simpan</string>
     <string name="place_name">Nama tempat</string>
     <string name="place_name_empty">Nama tempat wajib diisi.</string>
-    <string name="place_name_too_long" tools:ignore="PluralsCandidate">Nama tempat maksimal %1$d karakter.</string>
+    <string name="place_name_too_long">Nama tempat maksimal %1$d karakter.</string>
     <string name="place_pick_hint">Geser peta untuk menentukan titik tempat, atau pakai lokasi saat ini.</string>
     <string name="place_use_current_location">Pakai lokasi saat ini</string>
     <string name="place_location_rationale">Izin lokasi akurat dibutuhkan untuk memakai lokasi Anda saat ini sebagai titik tempat.
@@ -98,4 +98,39 @@ Data lokasi hanya disimpan di perangkat.</string>
     <string name="place_visits_title">Kunjungan</string>
     <string name="delete_place_title">Hapus tempat ini?</string>
     <string name="delete_place_message">Trip dan kunjungan tidak ikut terhapus; kunjungan hanya kehilangan nama tempat.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_tracking">Tracking</string>
+    <string name="settings_interval">Interval lokasi</string>
+    <string name="settings_interval_option">%1$d detik</string>
+    <string name="settings_accuracy">Ambang akurasi</string>
+    <string name="settings_next_trip_note">Perubahan berlaku mulai trip berikutnya.</string>
+    <string name="settings_display">Tampilan</string>
+    <string name="settings_unit">Satuan</string>
+    <string name="settings_unit_metric">Metrik (km, km/h)</string>
+    <string name="settings_unit_imperial">Imperial (mi, mph)</string>
+    <string name="settings_follow">Kamera Home mengikuti posisi</string>
+    <string name="settings_map">Peta</string>
+    <string name="settings_map_cache_note">Area yang pernah dibuka di peta disimpan hingga 200 MB dan tetap tampil tanpa internet.</string>
+    <string name="settings_clear_cache">Hapus cache peta</string>
+    <string name="settings_clear_cache_confirm">Hapus semua tile peta tersimpan? Peta akan diunduh ulang saat dibuka dengan internet.</string>
+    <string name="settings_cache_cleared">Cache peta dihapus.</string>
+    <string name="settings_cache_failed">Cache peta gagal dihapus.</string>
+    <string name="settings_about">Tentang</string>
+    <string name="settings_version">Versi %1$s</string>
+    <string name="settings_attribution">Peta: © OpenFreeMap · © OpenMapTiles · Data © kontributor OpenStreetMap</string>
+    <string name="settings_privacy">Data lokasi hanya disimpan di perangkat.</string>
+    <string name="trip_source_auto">Otomatis</string>
+    <string name="resume_trip">Lanjutkan</string>
+    <string name="error_resume_expired">Trip terputus lebih dari 60 menit dan hanya dapat diakhiri.</string>
+    <string name="auto_trip_notification_title">Perjalanan otomatis</string>
+    <string name="settings_auto_trip">Trip otomatis</string>
+    <string name="settings_auto_trip_toggle">Catat perjalanan otomatis</string>
+    <string name="settings_auto_trip_note">Mulai mencatat saat Anda berkendara atau bersepeda, dan berhenti setelah diam 5 menit. Membutuhkan izin aktivitas fisik dan lokasi sepanjang waktu.</string>
+    <string name="settings_auto_trip_walking">Termasuk berjalan kaki</string>
+    <string name="settings_auto_trip_revoked">Trip otomatis dinonaktifkan karena izin aktivitas fisik atau lokasi sepanjang waktu dicabut.</string>
+    <string name="auto_trip_need_precise">Izinkan lokasi akurat terlebih dahulu dari halaman Home.</string>
+    <string name="auto_trip_activity_rationale">Trip otomatis memakai deteksi aktivitas fisik untuk mengetahui kapan Anda mulai berkendara atau bersepeda. Data aktivitas tidak disimpan dan tidak dikirim.</string>
+    <string name="auto_trip_background_rationale">Agar trip dapat dimulai saat aplikasi tertutup, pilih \"Izinkan sepanjang waktu\" untuk lokasi. Data lokasi tetap hanya disimpan di perangkat.</string>
+    <string name="auto_trip_denied">Izin tidak diberikan, sehingga trip otomatis tetap nonaktif. Tracking manual tetap berfungsi.</string>
+    <string name="auto_trip_failed">Trip otomatis gagal diaktifkan. Coba lagi.</string>
 </resources>

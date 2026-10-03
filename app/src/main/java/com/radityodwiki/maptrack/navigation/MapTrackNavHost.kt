@@ -32,6 +32,7 @@ import com.radityodwiki.maptrack.ui.places.PlaceDetailViewModel
 import com.radityodwiki.maptrack.ui.places.PlaceEditorScreen
 import com.radityodwiki.maptrack.ui.places.PlaceEditorViewModel
 import com.radityodwiki.maptrack.ui.places.PlacesScreen
+import com.radityodwiki.maptrack.ui.settings.SettingsScreen
 import com.radityodwiki.maptrack.ui.tripdetail.TripDetailScreen
 import com.radityodwiki.maptrack.ui.tripdetail.TripDetailViewModel
 
@@ -39,6 +40,7 @@ object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val PLACES = "places"
+    const val SETTINGS = "settings"
     const val TRIP_DETAIL = "trip/{${TripDetailViewModel.ARG_TRIP_ID}}"
 
     const val PLACE_DETAIL = "place/{${PlaceDetailViewModel.ARG_PLACE_ID}}"
@@ -98,7 +100,8 @@ fun MapTrackNavHost() {
             startDestination = Routes.HOME,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Routes.HOME) { HomeScreen() }
+            composable(Routes.HOME) { HomeScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) }) }
+            composable(Routes.SETTINGS) { SettingsScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.HISTORY) {
                 HistoryScreen(onTripClick = { tripId -> navController.navigate(Routes.tripDetail(tripId)) })
             }

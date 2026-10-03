@@ -28,32 +28,9 @@ Each backlog item follows this format:
 <!-- ADD BACKLOG ITEMS BELOW -->
 
 
-## Fase 4 — Offline Map & Settings
-
-**Status:** `OPEN`
-
-**Summary:** Unduh wilayah peta via MapLibre `OfflineManager` (zoom 10–14, maks. 20 000 tile, default Wi-Fi saja) dengan halaman Offline Maps. Halaman Settings berbasis DataStore Preferences: interval tracking, ambang accuracy, satuan metrik/imperial, kamera mengikuti posisi, unduh hanya Wi-Fi, plus bagian Tentang. Setting tracking dibaca saat Start dan berlaku mulai trip berikutnya. Detail: PRD §38 Fase 4.
-
-**Open questions (resolve during planning):**
-1. Lisensi OpenFreeMap untuk unduhan offline — wajib diverifikasi di tiket pertama; bila tidak boleh, sumber tile pengganti apa (revisi §22)?
-2. Cara `TrackingConfig` menerima nilai dari DataStore tanpa menjadikan interval/accuracy magic number (snapshot config per trip?).
-3. Melanjutkan unduhan yang terputus saat halaman Offline Maps dibuka lagi: perilaku persis `OfflineRegion` MapLibre versi terpasang perlu diuji.
-
-## Fase 5 — Automatic Trip & Tracking Improvements
-
-**Status:** `BLOCKED` *(menunggu Fase 4 selesai)*
-
-**Summary:** Trip otomatis opt-in via Activity Recognition Transition API (`IN_VEHICLE`/`ON_BICYCLE`, opsional berjalan kaki) dengan `AutoTripConfig`, kolom `trips.source` (migrasi 3 → 4), dan permission `ACTIVITY_RECOGNITION` + `ACCESS_BACKGROUND_LOCATION` hanya saat opsi diaktifkan. Termasuk tombol **Lanjutkan** untuk trip terputus ≤ 60 menit, peredam jitter dengan titik jangkar pada perhitungan jarak, dan penghemat baterai (interval 30 s saat diam). Detail: PRD §38 Fase 5.
-
-**Open questions (resolve during planning):**
-1. Uji start foreground service dari background lewat event activity transition di targetSdk 36 dan HP vendor agresif (Xiaomi/Oppo/Vivo).
-2. Perubahan alur §8.1/DEC-001 untuk "Lanjutkan" agar invarian state `Active` sebelum service tetap terjaga.
-3. Cara menguji peredam jitter (rekaman diam 10 menit) secara otomatis di JVM — perlu fixture data GPS?
-4. Urutan tiket: improvement tracking (jitter, baterai, lanjutkan) sebelum trip otomatis?
-
 ## Fase 6 — Account
 
-**Status:** `BLOCKED` *(menunggu Fase 5 selesai)*
+**Status:** `BLOCKED` *(pilihan backend sedang didiskusikan dengan user: Laravel + VPS di PRD saat ini vs. Firebase Spark gratis; PRD wajib direvisi sebelum tiket dibuat)*
 
 **Summary:** Backend pertama: Laravel + PostgreSQL + Redis (+ Reverb untuk Fase 9) di satu VPS dengan Docker Compose dan HTTPS, API `/api/v1`, Sanctum token per perangkat. Client: register/login/logout, verifikasi email, lupa password, device management, hapus akun, halaman Akun dari Settings; token di DataStore terenkripsi Keystore. Login opsional — tanpa akun aplikasi tetap seperti Fase 1–5, dan tidak ada data lokasi dikirim. Detail: PRD §38 Fase 6.
 

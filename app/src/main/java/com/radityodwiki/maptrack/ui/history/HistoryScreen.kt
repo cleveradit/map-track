@@ -90,6 +90,13 @@ private fun HistoryRow(item: HistoryItem, onClick: () -> Unit, onDelete: () -> U
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.date, style = MaterialTheme.typography.titleMedium)
+                if (item.isAuto) {
+                    Text(
+                        stringResource(R.string.trip_source_auto),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
                 Text(item.timeRange, style = MaterialTheme.typography.bodyLarge)
                 if (item.isActive) {
                     Text(

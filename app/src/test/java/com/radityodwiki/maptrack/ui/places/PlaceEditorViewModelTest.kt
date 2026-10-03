@@ -8,6 +8,7 @@ import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.model.LocationPermission
 import com.radityodwiki.maptrack.domain.model.PlaceInput
 import com.radityodwiki.maptrack.domain.usecase.PlaceNameError
+import com.radityodwiki.maptrack.location.LocationRequestSpec
 import com.radityodwiki.maptrack.location.LocationSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,7 +44,7 @@ class PlaceEditorViewModelTest {
         var fixes: Flow<GpsFix> = flow { awaitCancellation() }
         override fun permissionState() = permission
         override fun isLocationEnabled() = enabled
-        override fun fixes() = fixes
+        override fun fixes(request: LocationRequestSpec) = fixes
     }
 
     private lateinit var database: MapTrackDatabase

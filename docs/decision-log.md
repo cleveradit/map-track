@@ -81,3 +81,33 @@ Entry format (4 fields):
 
 **Tickets:** TICKET-017, TICKET-018, TICKET-020
 
+## DEC-007 — Peta offline lewat cache tile, tanpa unduhan wilayah
+
+**Decision:** Fase 4 tidak memiliki halaman unduh wilayah. Offline hanya lewat ambient cache MapLibre (tile yang pernah ditampilkan, maks. 200 MB) dan aksi Hapus cache peta. PRD direvisi ke v2.4.
+
+**Why:** Terms of Service OpenFreeMap melarang *"collect data from the service in automated ways without permission"*; unduhan wilayah lewat `OfflineManager` meminta ribuan tile otomatis sekaligus. Tidak ditemukan sumber tile gratis tanpa API key yang jelas mengizinkan unduhan offline (OSM resmi melarang prefetch; VersaTiles tanpa ketentuan offline yang jelas; PMTiles tidak didukung offline pack MapLibre Android). User memilih opsi cache karena gratis dan sesuai lisensi.
+
+**Impact:** Area yang belum pernah dibuka tampil kosong saat offline, dan tile dapat terbuang bila cache penuh. Fitur unduh wilayah baru boleh ditambahkan bila OpenFreeMap memberi izin tertulis atau ada sumber tile gratis yang jelas mengizinkannya; jangan memanggil `OfflineManager.createOfflineRegion` ke server publik OpenFreeMap tanpa itu.
+
+**Tickets:** TICKET-023
+
+## DEC-008 — Peredam jitter juga melewati titik yang GPS-nya melaporkan diam
+
+**Decision:** `TripStatisticsCalculator.anchoredDistance` memakai aturan jangkar PRD (jarak > `max(accuracy jangkar, accuracy titik)`) **dan** melewati titik yang kecepatan GPS-nya diketahui < `AutoTripConfig.STATIONARY_SPEED_MPS` (0,5 m/s). PRD direvisi ke v2.5.
+
+**Why:** Pada simulasi diam 10 menit (titik tiap 5 s, accuracy 10–30 m), aturan jangkar saja menambah median ±200 m (simpangan bergeser perlahan) sampai ±1,5 km (simpangan acak), jauh di atas kriteria PRD < 50 m. Dua titik yang sama-sama meleset hingga accuracy-nya sering berjarak lebih dari accuracy terbesar. Dengan syarat kecepatan, median turun ke ±31 m (drift) dan berjalan kaki 840 m tetap terhitung 839–859 m.
+
+**Impact:** Titik tanpa kecepatan hanya memakai aturan accuracy, sehingga jitter tanpa data kecepatan tetap dapat menambah jarak (test `withoutSpeedOnlyTheAccuracyRuleApplies` mendokumentasikannya). Kriteria akhir dibuktikan dengan rekaman nyata di uji manual. Mengubah aturan ini mengubah statistik trip baru saja; trip lama tidak dihitung ulang.
+
+**Tickets:** TICKET-028
+
+## DEC-009 — Trip otomatis pendek dihapus di `TripRecorder`, lewat semua jalur selesai
+
+**Decision:** Penghapusan trip `auto` < 300 m atau < 2 menit dilakukan di `TripRecorder.finish` dan `finishInterrupted`, sehingga berlaku untuk henti otomatis, Stop manual, dan Akhiri Trip terputus.
+
+**Why:** PRD menyebut trip otomatis pendek "dihapus otomatis setelah berhenti" tanpa membedakan cara berhenti. Satu titik penegakan mencegah trip palsu lolos lewat jalur lain (mis. pengguna menekan Stop pada trip yang dimulai karena salah deteksi).
+
+**Impact:** Pengguna yang menghentikan trip otomatis pendek secara manual tidak akan menemukannya di History. Trip manual tidak pernah dihapus. Kode baru yang menyelesaikan trip harus lewat `TripRecorder`, bukan langsung `TripRepository.finishTrip`, agar aturan ini tetap berlaku.
+
+**Tickets:** TICKET-031
+

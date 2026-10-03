@@ -12,4 +12,10 @@ object MapConfig {
 
     /** Street-level zoom when centering on the user. */
     const val FOLLOW_ZOOM = 16.0
+
+    /**
+     * Ambient tile cache size (PRD §38 Fase 4, v2.4). Tiles once shown stay available offline;
+     * there are no region downloads because OpenFreeMap's terms forbid automated bulk fetching.
+     */
+    const val MAP_CACHE_MAX_BYTES = 200L * 1024 * 1024
 }

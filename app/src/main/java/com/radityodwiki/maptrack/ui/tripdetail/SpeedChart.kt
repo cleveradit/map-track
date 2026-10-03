@@ -21,7 +21,7 @@ import com.radityodwiki.maptrack.ui.format.formatDuration
 /** Speed over time drawn with Canvas (PRD §21); expects at least two samples. */
 @Composable
 fun SpeedChart(samples: List<SpeedSample>, modifier: Modifier = Modifier) {
-    val maxKmh = chartMaxKmh(samples)
+    val maxSpeed = chartMax(samples)
     val maxOffset = samples.last().offsetMs.coerceAtLeast(1)
     val lineColor = MaterialTheme.colorScheme.primary
     val axisColor = MaterialTheme.colorScheme.outlineVariant
@@ -34,7 +34,7 @@ fun SpeedChart(samples: List<SpeedSample>, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxHeight().padding(end = 8.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("${maxKmh.toInt()}", style = labelStyle, color = labelColor)
+                Text("${maxSpeed.toInt()}", style = labelStyle, color = labelColor)
                 Text("0", style = labelStyle, color = labelColor)
             }
             Canvas(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -43,7 +43,7 @@ fun SpeedChart(samples: List<SpeedSample>, modifier: Modifier = Modifier) {
                 val path = Path()
                 samples.forEachIndexed { index, sample ->
                     val x = size.width * sample.offsetMs / maxOffset
-                    val y = size.height * (1f - (sample.kmh / maxKmh).toFloat())
+                    val y = size.height * (1f - (sample.speed / maxSpeed).toFloat())
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
                 drawPath(path, lineColor, style = Stroke(width = 4f))

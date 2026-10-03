@@ -92,7 +92,7 @@ Checklist ini dijalankan user sekali bersama checklist fase lain setelah semua f
 
 Bila ada langkah yang gagal, catat di backlog dengan merek/versi HP.
 
-Hasil (2026-10-03): `./gradlew --no-build-cache testDebugUnitTest assembleDebug lintDebug` → `BUILD SUCCESSFUL`; 155 test, 0 gagal; lint 0 error, 1 warning (`OldTargetApi`). Run lint pertama memunculkan 2 warning `PluralsCandidate` pada `place_visit_summary` dan `place_name_too_long`; bahasa Indonesia tidak berbentuk jamak, sehingga diberi `tools:ignore="PluralsCandidate"`.
+Hasil (2026-10-03): `./gradlew --no-build-cache testDebugUnitTest assembleDebug lintDebug` → `BUILD SUCCESSFUL`; 155 test, 0 gagal; lint 0 error, 1 warning (`OldTargetApi`). Run lint pertama memunculkan 2 warning `PluralsCandidate` pada `place_visit_summary` dan `place_name_too_long`; bahasa Indonesia tidak berbentuk jamak, sehingga diberi `tools:ignore="PluralsCandidate"` (sejak TICKET-026 dipindah ke root `strings.xml`).
 
 ---
 

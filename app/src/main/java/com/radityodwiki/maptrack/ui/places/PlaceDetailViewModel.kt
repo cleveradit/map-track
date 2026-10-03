@@ -9,17 +9,20 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.radityodwiki.maptrack.MapTrackApplication
 import com.radityodwiki.maptrack.data.repository.PlaceRepository
 import com.radityodwiki.maptrack.data.repository.TripRepository
+import com.radityodwiki.maptrack.domain.model.AppSettings
 import com.radityodwiki.maptrack.domain.model.Visit
 import com.radityodwiki.maptrack.domain.usecase.PlaceMatcher
 import com.radityodwiki.maptrack.ui.format.formatDate
 import com.radityodwiki.maptrack.ui.format.formatDistance
 import com.radityodwiki.maptrack.ui.format.formatDuration
 import com.radityodwiki.maptrack.ui.format.formatTime
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.ZoneId
@@ -54,6 +57,7 @@ class PlaceDetailViewModel(
     val placeId: String,
     private val placeRepository: PlaceRepository,
     tripRepository: TripRepository,
+    settings: Flow<AppSettings> = flowOf(AppSettings.DEFAULT),
 ) : ViewModel() {
 
     /** Visits are those whose nearest matching place is this one (PRD §38 Fase 3). */
@@ -61,14 +65,15 @@ class PlaceDetailViewModel(
         placeRepository.observePlace(placeId),
         placeRepository.observePlaces(),
         tripRepository.observeAllVisits(),
-    ) { place, places, visits ->
+        settings,
+    ) { place, places, visits, settings ->
         if (place == null) {
             PlaceDetailUiState.NotFound
         } else {
             val matched = PlaceMatcher.group(visits, places)[place.id].orEmpty()
             PlaceDetailUiState.Loaded(
                 name = place.name,
-                radius = formatDistance(place.radiusMeters),
+                radius = formatDistance(place.radiusMeters, settings.distanceUnit),
                 latitude = place.latitude,
                 longitude = place.longitude,
                 radiusMeters = place.radiusMeters,
@@ -97,7 +102,7 @@ class PlaceDetailViewModel(
             initializer {
                 val container = (this[APPLICATION_KEY] as MapTrackApplication).container
                 val placeId = createSavedStateHandle().get<String>(ARG_PLACE_ID).orEmpty()
-                PlaceDetailViewModel(placeId, container.placeRepository, container.tripRepository)
+                PlaceDetailViewModel(placeId, container.placeRepository, container.tripRepository, container.settingsRepository.settings)
             }
         }
     }

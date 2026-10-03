@@ -10,11 +10,16 @@ object LocationFilter {
 
     /**
      * @param previous the last point already stored for the same trip, or null for the first one.
+     * @param maxAccuracyMeters the trip's accuracy threshold (Settings, PRD §38 Fase 4).
      * @return null when [candidate] is accepted, otherwise the reason it is rejected.
      */
-    fun evaluate(candidate: LocationPoint, previous: LocationPoint?): RejectReason? {
+    fun evaluate(
+        candidate: LocationPoint,
+        previous: LocationPoint?,
+        maxAccuracyMeters: Float = TrackingConfig.MAX_ACCURACY_METERS,
+    ): RejectReason? {
         if (!hasValidCoordinates(candidate)) return RejectReason.INVALID_COORDINATES
-        if (candidate.accuracyMeters > TrackingConfig.MAX_ACCURACY_METERS) return RejectReason.POOR_ACCURACY
+        if (candidate.accuracyMeters > maxAccuracyMeters) return RejectReason.POOR_ACCURACY
         if (previous == null) return null
         if (candidate.recordedAt <= previous.recordedAt) return RejectReason.OUT_OF_ORDER
 

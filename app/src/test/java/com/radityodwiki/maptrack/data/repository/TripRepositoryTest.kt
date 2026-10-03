@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
 import com.radityodwiki.maptrack.domain.model.LocationPoint
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 import com.radityodwiki.maptrack.domain.usecase.PlaceDetectionConfig
 import kotlinx.coroutines.flow.first
@@ -253,5 +254,20 @@ class TripRepositoryTest {
         assertFalse(repository.recomputeVisits("missing"))
         assertTrue(repository.observeVisits(running.id).first().isEmpty())
         assertEquals(emptyList<String>(), repository.tripIdsNeedingVisits())
+    }
+
+    @Test
+    fun startTrip_recordsSource() = runTest {
+        val manual = repository.startTrip().getOrThrow()
+        repository.completeTrip(manual.id, 2_000, 0.0, 0.0, null)
+        val auto = repository.startTrip(TripSource.AUTO).getOrThrow()
+
+        assertEquals(TripSource.MANUAL, repository.getTrip(manual.id)!!.source)
+        assertEquals(TripSource.AUTO, repository.getTrip(auto.id)!!.source)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun unknownSource_isRejected() {
+        TripSource.fromDbValue("x")
     }
 }

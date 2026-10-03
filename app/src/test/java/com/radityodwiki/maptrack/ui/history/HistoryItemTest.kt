@@ -1,6 +1,7 @@
 package com.radityodwiki.maptrack.ui.history
 
 import com.radityodwiki.maptrack.domain.model.Trip
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,7 +23,7 @@ class HistoryItemTest {
 
     @Test
     fun completedTrip() {
-        val item = trip(at(29, 7, 32), at(29, 8, 18), 21_700.0, TripStatus.COMPLETED).toHistoryItem(jakarta)
+        val item = trip(at(29, 7, 32), at(29, 8, 18), 21_700.0, TripStatus.COMPLETED).toHistoryItem(zone = jakarta)
 
         assertEquals("29 September 2026", item.date)
         assertEquals("07:32 - 08:18", item.timeRange)
@@ -33,7 +34,7 @@ class HistoryItemTest {
 
     @Test
     fun activeTripHasNoStatistics() {
-        val item = trip(at(29, 7, 32), null, null, TripStatus.ACTIVE).toHistoryItem(jakarta)
+        val item = trip(at(29, 7, 32), null, null, TripStatus.ACTIVE).toHistoryItem(zone = jakarta)
 
         assertEquals("07:32 - …", item.timeRange)
         assertNull(item.distance)
@@ -43,10 +44,18 @@ class HistoryItemTest {
 
     @Test
     fun tripOverMidnightUsesStartDate() {
-        val item = trip(at(28, 23, 50), at(29, 0, 20), 5_000.0, TripStatus.COMPLETED).toHistoryItem(jakarta)
+        val item = trip(at(28, 23, 50), at(29, 0, 20), 5_000.0, TripStatus.COMPLETED).toHistoryItem(zone = jakarta)
 
         assertEquals("28 September 2026", item.date)
         assertEquals("23:50 - 00:20", item.timeRange)
         assertEquals("30 menit", item.duration)
+    }
+
+    @Test
+    fun autoTripIsMarked() {
+        val manual = trip(at(29, 7, 32), at(29, 8, 18), 1_000.0, TripStatus.COMPLETED)
+
+        assertEquals(false, manual.toHistoryItem(zone = jakarta).isAuto)
+        assertEquals(true, manual.copy(source = TripSource.AUTO).toHistoryItem(zone = jakarta).isAuto)
     }
 }

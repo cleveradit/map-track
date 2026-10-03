@@ -31,9 +31,12 @@ import org.maplibre.geojson.Point
 private const val USER_SOURCE_ID = "user-position"
 private const val USER_LAYER_ID = "user-position-dot"
 
-/** Home map: a dot at the latest GPS fix and a camera that follows it (PRD §7.1, §22). */
+/**
+ * Home map: a dot at the latest GPS fix and a camera that follows it (PRD §7.1, §22). With
+ * [followByDefault] off (Settings, Fase 4) the camera still zooms to the first fix, then stays put.
+ */
 @Composable
-fun HomeMap(fix: GpsFix?, modifier: Modifier = Modifier) {
+fun HomeMap(fix: GpsFix?, followByDefault: Boolean, modifier: Modifier = Modifier) {
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var userSource by remember { mutableStateOf<GeoJsonSource?>(null) }
     var following by remember { mutableStateOf(true) }
@@ -68,6 +71,10 @@ fun HomeMap(fix: GpsFix?, modifier: Modifier = Modifier) {
         }
     }
 
+    LaunchedEffect(followByDefault) {
+        if (hasCenteredOnce) following = followByDefault
+    }
+
     LaunchedEffect(fix, map, userSource, following) {
         val currentMap = map ?: return@LaunchedEffect
         val source = userSource ?: return@LaunchedEffect
@@ -78,6 +85,7 @@ fun HomeMap(fix: GpsFix?, modifier: Modifier = Modifier) {
             CameraAction.ZOOM_TO_FIX -> {
                 currentMap.animateCamera(CameraUpdateFactory.newLatLngZoom(target, MapConfig.FOLLOW_ZOOM))
                 hasCenteredOnce = true
+                if (!followByDefault) following = false
             }
             CameraAction.FOLLOW -> currentMap.easeCamera(CameraUpdateFactory.newLatLng(target))
             CameraAction.NONE -> Unit

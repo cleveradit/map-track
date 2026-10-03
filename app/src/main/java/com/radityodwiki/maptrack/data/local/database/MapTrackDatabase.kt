@@ -16,10 +16,11 @@ import com.radityodwiki.maptrack.data.local.entity.VisitEntity
 
 @Database(
     entities = [TripEntity::class, LocationPointEntity::class, VisitEntity::class, PlaceEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    // 1 → 2 (Fase 2): table visits + trips.visit_detection_version. 2 → 3 (Fase 3): table places. Purely additive.
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    // 1 → 2 (Fase 2): table visits + trips.visit_detection_version. 2 → 3 (Fase 3): table places.
+    // 3 → 4 (Fase 5): trips.source, default 'manual'. All purely additive.
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
 abstract class MapTrackDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao

@@ -14,5 +14,7 @@ For a full understanding, start with [architecture.md](../architecture.md) and [
 | [tracking](tracking.md) | Start/Stop trip, foreground service, filter dan penyimpanan titik, notification | `app/src/main/java/com/radityodwiki/maptrack/location/` |
 | [history](history.md) | Daftar trip terbaru di atas dan hapus trip dengan konfirmasi | `app/src/main/java/com/radityodwiki/maptrack/ui/history/` |
 | [trip-detail](trip-detail.md) | Ringkasan statistik trip, tempat singgah, peta rute, dan grafik kecepatan | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/` |
+| [auto-trip](auto-trip.md) | Trip otomatis opt-in lewat Activity Recognition: mulai saat berkendara/bersepeda, henti setelah diam, hapus trip pendek | `app/src/main/java/com/radityodwiki/maptrack/location/AutoTripController.kt` |
+| [settings](settings.md) | Halaman Settings (DataStore): interval & akurasi per trip, satuan, kamera ikuti, hapus cache peta, Tentang | `app/src/main/java/com/radityodwiki/maptrack/ui/settings/` |
 | [places](places.md) | Tab Tempat: buat, ubah, hapus tempat bernama; detail kunjungan; nama visit dicocokkan saat ditampilkan | `app/src/main/java/com/radityodwiki/maptrack/ui/places/` |
 | [place-detection](place-detection.md) | Deteksi visit (diam ≥ 5 menit dalam 100 m) saat trip selesai dan backfill trip lama | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/VisitDetector.kt` |

@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Automatic trips only, requested when the user enables them (PRD §38 Fase 5, Rule 7). -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Re-subscribes activity transitions after a reboot when automatic trips are on. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Map tiles only; no location data is sent (PRD §35). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -33,6 +38,19 @@
             android:name=".location.LocationTrackingService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <receiver
+            android:name=".location.ActivityTransitionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".location.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

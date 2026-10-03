@@ -3,8 +3,8 @@ package com.radityodwiki.maptrack.ui.home
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,15 +17,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +53,7 @@ import java.util.Locale
 
 @Composable
 fun HomeScreen(
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory),
 ) {
@@ -92,9 +98,15 @@ fun HomeScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineSmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
+            }
+        }
         HomeMap(
             fix = state.fix,
+            followByDefault = state.mapFollowLocation,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
@@ -130,8 +142,8 @@ fun HomeScreen(
             }
         }
 
-        StatRow(stringResource(R.string.label_speed), formatCurrentSpeed(state.fix?.speedMps, state.fix?.time, state.now))
-        StatRow(stringResource(R.string.label_accuracy), formatAccuracy(state.fix?.accuracyMeters))
+        StatRow(stringResource(R.string.label_speed), formatCurrentSpeed(state.fix?.speedMps, state.fix?.time, state.now, state.distanceUnit))
+        StatRow(stringResource(R.string.label_accuracy), formatAccuracy(state.fix?.accuracyMeters, state.distanceUnit))
         StatRow(stringResource(R.string.label_gps), stringResource(state.gpsStatus.labelRes()))
         StatRow(
             stringResource(R.string.label_position),
@@ -143,10 +155,17 @@ fun HomeScreen(
             onStart = onStart,
             onStop = viewModel::stopTracking,
             onEndInterrupted = viewModel::endInterruptedTrip,
+            onResumeInterrupted = viewModel::resumeInterruptedTrip,
         )
 
         state.interruptedTrip?.let { interrupted ->
-            InterruptedTripDialog(interrupted, enabled = !state.busy, onEnd = viewModel::endInterruptedTrip)
+            InterruptedTripDialog(
+                trip = interrupted,
+                canResume = interrupted.canResume(state.now),
+                enabled = !state.busy,
+                onEnd = viewModel::endInterruptedTrip,
+                onResume = viewModel::resumeInterruptedTrip,
+            )
         }
 
         state.startError?.let { error ->
@@ -160,11 +179,23 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TrackingSection(state: HomeUiState, onStart: () -> Unit, onStop: () -> Unit, onEndInterrupted: () -> Unit) {
+private fun TrackingSection(
+    state: HomeUiState,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onEndInterrupted: () -> Unit,
+    onResumeInterrupted: () -> Unit,
+) {
     val trip = state.activeTrip
-    if (state.interruptedTrip != null) {
+    val interrupted = state.interruptedTrip
+    if (interrupted != null) {
         StatRow(stringResource(R.string.label_tracking), stringResource(R.string.tracking_interrupted))
-        Button(onClick = onEndInterrupted, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+        if (interrupted.canResume(state.now)) {
+            Button(onClick = onResumeInterrupted, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.resume_trip))
+            }
+        }
+        OutlinedButton(onClick = onEndInterrupted, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.end_trip))
         }
         return
@@ -186,7 +217,13 @@ private fun TrackingSection(state: HomeUiState, onStart: () -> Unit, onStop: () 
 }
 
 @Composable
-private fun InterruptedTripDialog(trip: InterruptedTrip, enabled: Boolean, onEnd: () -> Unit) {
+private fun InterruptedTripDialog(
+    trip: InterruptedTrip,
+    canResume: Boolean,
+    enabled: Boolean,
+    onEnd: () -> Unit,
+    onResume: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
@@ -198,6 +235,11 @@ private fun InterruptedTripDialog(trip: InterruptedTrip, enabled: Boolean, onEnd
             }
         },
         confirmButton = {
+            if (canResume) {
+                TextButton(onClick = onResume, enabled = enabled) { Text(stringResource(R.string.resume_trip)) }
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onEnd, enabled = enabled) { Text(stringResource(R.string.end_trip)) }
         },
     )
@@ -208,6 +250,7 @@ private fun StartTrackingError.messageRes(): Int = when (this) {
     StartTrackingError.LOCATION_DISABLED -> R.string.location_disabled
     StartTrackingError.TRIP_ALREADY_ACTIVE -> R.string.error_trip_already_active
     StartTrackingError.SERVICE_START_FAILED -> R.string.error_service_start_failed
+    StartTrackingError.RESUME_EXPIRED -> R.string.error_resume_expired
 }
 
 private fun GpsStatus.labelRes(): Int = when (this) {

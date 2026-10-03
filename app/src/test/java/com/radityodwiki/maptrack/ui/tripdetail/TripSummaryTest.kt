@@ -1,6 +1,7 @@
 package com.radityodwiki.maptrack.ui.tripdetail
 
 import com.radityodwiki.maptrack.domain.model.Trip
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -17,7 +18,7 @@ class TripSummaryTest {
 
     @Test
     fun completedTrip() {
-        val summary = Trip("id", start, end, 21_700.0, 7.86, 20.3, TripStatus.COMPLETED, end).toSummary(jakarta)
+        val summary = Trip("id", start, end, 21_700.0, 7.86, 20.3, TripStatus.COMPLETED, end).toSummary(zone = jakarta)
 
         assertEquals("29 September 2026", summary.date)
         assertEquals("07:32", summary.startTime)
@@ -31,7 +32,7 @@ class TripSummaryTest {
 
     @Test
     fun activeTripHidesFinalStatistics() {
-        val summary = Trip("id", start, null, null, null, null, TripStatus.ACTIVE, start).toSummary(jakarta)
+        val summary = Trip("id", start, null, null, null, null, TripStatus.ACTIVE, start).toSummary(zone = jakarta)
 
         assertEquals("07:32", summary.startTime)
         listOf(summary.endTime, summary.duration, summary.distance, summary.averageSpeed, summary.maxSpeed)
@@ -41,8 +42,16 @@ class TripSummaryTest {
 
     @Test
     fun missingMaxSpeed() {
-        val summary = Trip("id", start, end, 0.0, 0.0, null, TripStatus.COMPLETED, end).toSummary(jakarta)
+        val summary = Trip("id", start, end, 0.0, 0.0, null, TripStatus.COMPLETED, end).toSummary(zone = jakarta)
 
         assertEquals("—", summary.maxSpeed)
+    }
+
+    @Test
+    fun autoTripIsMarked() {
+        val manual = Trip("id", 0, 60_000, 0.0, 0.0, null, TripStatus.COMPLETED, 60_000)
+
+        assertFalse(manual.toSummary(zone = jakarta).isAuto)
+        assertTrue(manual.copy(source = TripSource.AUTO).toSummary(zone = jakarta).isAuto)
     }
 }

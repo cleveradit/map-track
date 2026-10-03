@@ -1,5 +1,6 @@
 package com.radityodwiki.maptrack.ui.home
 
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.model.LocationPermission
 import com.radityodwiki.maptrack.domain.model.Trip
@@ -18,6 +19,8 @@ data class HomeUiState(
     val startError: StartTrackingError? = null,
     val busy: Boolean = false,
     val interruptedTrip: InterruptedTrip? = null,
+    val distanceUnit: DistanceUnit = DistanceUnit.METRIC,
+    val mapFollowLocation: Boolean = true,
 ) {
     val gpsStatus: GpsStatus get() = gpsStatusOf(permission, locationEnabled, fix, now)
     val isTracking: Boolean get() = activeTrip != null

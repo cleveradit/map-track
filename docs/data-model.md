@@ -4,8 +4,10 @@
 
 | Storage | Isi | Definisi |
 |---|---|---|
-| Room database `map_track.db` (versi 3) | Trip, location point, visit, dan tempat | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
-| Skema terekspor | Snapshot skema per versi (`1.json`, `2.json`, `3.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
+| Room database `map_track.db` (versi 4) | Trip, location point, visit, dan tempat | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
+| DataStore Preferences `settings` | Setting pengguna (Fase 4): `tracking_interval_ms`, `accuracy_threshold_m`, `distance_unit`, `map_follow_location`, `auto_trip_enabled`, `auto_trip_include_walking`, `auto_trip_revoked_notice`; lihat [settings.md](features/settings.md) | `app/src/main/java/com/radityodwiki/maptrack/data/settings/SettingsRepository.kt` |
+| Cache tile MapLibre | Ambient cache tile peta, maks. 200 MB (`MapConfig.MAP_CACHE_MAX_BYTES`); dikelola MapLibre, bukan Room | `app/src/main/java/com/radityodwiki/maptrack/ui/map/MapCache.kt` |
+| Skema terekspor | Snapshot skema per versi (`1.json`–`4.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
 
 Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dalam meter.
 
@@ -30,6 +32,7 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | `trips` | `max_speed` | REAL? | m/s, `NULL` selama `active` atau bila tidak ada data speed |
 | `trips` | `status` | TEXT | `active` / `completed`, di-index |
 | `trips` | `updated_at` | INTEGER | Wajib, diisi saat insert dan saat trip diselesaikan (`finishTrip`/`completeTrip`); tidak berubah karena perhitungan visit |
+| `trips` | `source` | TEXT | Wajib, `manual` / `auto` (default `manual`; trip sebelum Fase 5 = `manual`); enum `TripSource` |
 | `trips` | `visit_detection_version` | INTEGER | Wajib, default `0` (belum dihitung); diisi `PlaceDetectionConfig.DETECTION_VERSION` setelah visit dihitung. Tidak dipetakan ke domain `Trip` |
 | `location_points` | `id` | INTEGER | Primary key auto-increment, hanya berlaku lokal |
 | `location_points` | `trip_id` | TEXT | Wajib, FK → `trips.id`, `ON DELETE CASCADE` |
@@ -58,7 +61,8 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 - Tidak ada relasi FK antara `visits` dan `places`: nama visit dicocokkan saat ditampilkan (`PlaceMatcher`), sehingga menghapus tempat tidak menyentuh visit.
 - Aturan validasi tempat ditegakkan `PlaceRepository` (`InvalidPlaceException`), bukan skema.
 - Index unik (`trip_id`, `recorded_at`): insert titik ganda diabaikan (`OnConflictStrategy.IGNORE`, `addPoint` mengembalikan `false`).
-- Enum `TripStatus` (`domain/model/Trip.kt`): `ACTIVE` ↔ `active`, `COMPLETED` ↔ `completed`.
+- Enum `TripStatus` (`domain/model/Trip.kt`): `ACTIVE` ↔ `active`, `COMPLETED` ↔ `completed`. Enum `TripSource`: `MANUAL` ↔ `manual`, `AUTO` ↔ `auto`.
+- Trip `auto` yang terlalu pendek (< 300 m atau < 2 menit) dihapus beserta titik dan visit-nya setelah selesai (`TripRecorder`).
 - Aturan yang ditegakkan `TripRepository`, bukan skema: maksimal satu trip `active` (`ActiveTripExistsException`), trip `active` tidak dapat dihapus (`ActiveTripDeletionException`).
 
 ## Migrations
@@ -67,3 +71,4 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 |---|---|---|---|
 | 1 → 2 (Fase 2) | `AutoMigration(from = 1, to = 2)` | Tabel `visits`; kolom `trips.visit_detection_version INTEGER NOT NULL DEFAULT 0`. Tidak ada baris yang diubah | `MigrationTest` (lihat [DEC-004](decision-log.md)) |
 | 2 → 3 (Fase 3) | `AutoMigration(from = 2, to = 3)` | Tabel `places`. Tidak ada baris yang diubah | `MigrationTest.migrate2To3_*` |
+| 3 → 4 (Fase 5) | `AutoMigration(from = 3, to = 4)` | Kolom `trips.source TEXT NOT NULL DEFAULT 'manual'` | `MigrationTest.migrate3To4_*` |

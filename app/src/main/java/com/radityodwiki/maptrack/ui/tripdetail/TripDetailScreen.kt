@@ -96,6 +96,13 @@ private fun TripDetailContent(state: TripDetailUiState.Loaded, onSaveVisitAsPlac
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(summary.date, style = MaterialTheme.typography.headlineSmall)
+        if (summary.isAuto) {
+            Text(
+                stringResource(R.string.trip_source_auto),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
         if (summary.isActive) {
             Text(
                 stringResource(R.string.history_active),
@@ -135,7 +142,7 @@ private fun TripDetailContent(state: TripDetailUiState.Loaded, onSaveVisitAsPlac
             Text(stringResource(R.string.route_not_enough_data), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Text(stringResource(R.string.speed_history_title), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.speed_history_title, state.speedUnit), style = MaterialTheme.typography.titleMedium)
         if (state.samples.size >= 2) {
             SpeedChart(state.samples, Modifier.fillMaxWidth())
         } else {

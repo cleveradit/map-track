@@ -1,5 +1,6 @@
 package com.radityodwiki.maptrack.ui.tripdetail
 
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.domain.usecase.testPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -18,8 +19,8 @@ class SpeedSeriesTest {
         val samples = speedSeries(points, startedAt = 0)
 
         assertEquals(listOf(1_000L, 11_000L), samples.map { it.offsetMs })
-        assertEquals(36.0, samples[0].kmh, 0.001)
-        assertEquals(45.0, samples[1].kmh, 0.001)
+        assertEquals(36.0, samples[0].speed, 0.001)
+        assertEquals(45.0, samples[1].speed, 0.001)
     }
 
     @Test
@@ -35,7 +36,15 @@ class SpeedSeriesTest {
 
     @Test
     fun yAxisRoundsUpToTen() {
-        assertEquals(80.0, chartMaxKmh(listOf(SpeedSample(0, 73.0))), 0.0)
-        assertEquals(10.0, chartMaxKmh(emptyList()), 0.0)
+        assertEquals(80.0, chartMax(listOf(SpeedSample(0, 73.0))), 0.0)
+        assertEquals(10.0, chartMax(emptyList()), 0.0)
+    }
+
+    @Test
+    fun imperialSamplesAndAxis() {
+        val samples = speedSeries(listOf(testPoint(recordedAt = 0, speed = 10f)), startedAt = 0, unit = DistanceUnit.IMPERIAL)
+
+        assertEquals(22.37, samples.single().speed, 0.01)
+        assertEquals(30.0, chartMax(samples), 0.0)
     }
 }

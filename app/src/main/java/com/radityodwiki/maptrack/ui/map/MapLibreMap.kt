@@ -34,6 +34,7 @@ fun MapLibreMap(
 
     val mapView = remember {
         MapLibre.getInstance(context)
+        MapCache.ensureConfigured(context)
         MapView(context).apply {
             onCreate(null)
             // Keep pan/zoom gestures on the map when it sits inside a scrollable parent.

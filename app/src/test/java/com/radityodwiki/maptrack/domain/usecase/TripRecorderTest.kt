@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
 import com.radityodwiki.maptrack.data.repository.TripRepository
 import com.radityodwiki.maptrack.domain.model.GpsFix
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -176,5 +177,52 @@ class TripRecorderTest {
 
         assertEquals(1, repository.observeVisits(trip.id).first().size)
         assertEquals(PlaceDetectionConfig.DETECTION_VERSION, database.tripDao().getById(trip.id)!!.visitDetectionVersion)
+    }
+
+    @Test
+    fun tripAccuracyThresholdIsApplied() = runTest {
+        val trip = repository.startTrip().getOrThrow()
+
+        assertEquals(RejectReason.POOR_ACCURACY, recorder.record(trip.id, fix(0.0, 1_000, accuracy = 30f), maxAccuracyMeters = 20f))
+        assertNull(recorder.record(trip.id, fix(0.0, 2_000, accuracy = 30f), maxAccuracyMeters = 100f))
+    }
+
+    /** A finished trip of [meters] going north over [durationMs], started at 0. */
+    private suspend fun finishedTrip(source: TripSource, meters: Double, durationMs: Long): String {
+        clock = 0
+        val trip = repository.startTrip(source).getOrThrow()
+        repository.addPoint(testPoint(recordedAt = 0, speed = 5f).copy(tripId = trip.id))
+        repository.addPoint(testPoint(latitude = meters * DEG_PER_METER, recordedAt = durationMs, speed = 5f).copy(tripId = trip.id))
+        clock = durationMs
+        recorder.finish(trip.id)
+        return trip.id
+    }
+
+    @Test
+    fun shortAutoTripsAreDeleted() = runTest {
+        val tooShortDistance = finishedTrip(TripSource.AUTO, meters = 250.0, durationMs = 10 * 60_000L)
+        val tooShortTime = finishedTrip(TripSource.AUTO, meters = 1_000.0, durationMs = 90_000L)
+        val kept = finishedTrip(TripSource.AUTO, meters = 300.5, durationMs = 2 * 60_000L)
+
+        assertNull(repository.getTrip(tooShortDistance))
+        assertNull(repository.getTrip(tooShortTime))
+        assertEquals(TripStatus.COMPLETED, repository.getTrip(kept)!!.status)
+    }
+
+    @Test
+    fun shortManualTripIsKept() = runTest {
+        val manual = finishedTrip(TripSource.MANUAL, meters = 50.0, durationMs = 30_000L)
+
+        assertEquals(TripStatus.COMPLETED, repository.getTrip(manual)!!.status)
+    }
+
+    @Test
+    fun interruptedShortAutoTripIsDeletedToo() = runTest {
+        val trip = repository.startTrip(TripSource.AUTO).getOrThrow()
+        repository.addPoint(testPoint(recordedAt = 10_000).copy(tripId = trip.id))
+
+        recorder.finishInterrupted(trip.id)
+
+        assertNull(repository.getTrip(trip.id))
     }
 }

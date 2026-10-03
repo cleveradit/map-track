@@ -39,24 +39,25 @@ class LocationTracker(context: Context) : LocationSource {
     }
 
     /**
-     * High-accuracy fixes at [TrackingConfig.INTERVAL_MS]. Updates are removed when the collector
-     * is cancelled. Completes immediately when precise location permission is missing.
+     * Fixes at the requested interval and priority. Updates are removed when the collector is
+     * cancelled. Completes immediately when precise location permission is missing.
      */
     @SuppressLint("MissingPermission")
-    override fun fixes(): Flow<GpsFix> = callbackFlow {
+    override fun fixes(request: LocationRequestSpec): Flow<GpsFix> = callbackFlow {
         if (permissionState() != LocationPermission.GRANTED) {
             close()
             return@callbackFlow
         }
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, TrackingConfig.INTERVAL_MS)
-            .setMinUpdateIntervalMillis(TrackingConfig.MIN_UPDATE_INTERVAL_MS)
+        val priority = if (request.highAccuracy) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
+        val locationRequest = LocationRequest.Builder(priority, request.intervalMs)
+            .setMinUpdateIntervalMillis(request.intervalMs)
             .build()
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.locations.forEach { trySend(it.toGpsFix()) }
             }
         }
-        client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+        client.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
         awaitClose { client.removeLocationUpdates(callback) }
     }
 

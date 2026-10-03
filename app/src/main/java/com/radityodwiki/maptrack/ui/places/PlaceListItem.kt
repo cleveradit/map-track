@@ -1,5 +1,6 @@
 package com.radityodwiki.maptrack.ui.places
 
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.domain.model.Place
 import com.radityodwiki.maptrack.domain.model.Visit
 import com.radityodwiki.maptrack.ui.format.formatDate
@@ -17,10 +18,14 @@ data class PlaceListItem(
 )
 
 /** [visits] are the visits matched to this place. */
-fun Place.toListItem(visits: List<Visit>, zone: ZoneId = ZoneId.systemDefault()) = PlaceListItem(
+fun Place.toListItem(
+    visits: List<Visit>,
+    unit: DistanceUnit = DistanceUnit.METRIC,
+    zone: ZoneId = ZoneId.systemDefault(),
+) = PlaceListItem(
     placeId = id,
     name = name,
-    radius = formatDistance(radiusMeters),
+    radius = formatDistance(radiusMeters, unit),
     visitCount = visits.size,
     lastVisitDate = visits.maxOfOrNull { it.arrivedAt }?.let { formatDate(it, zone) },
 )

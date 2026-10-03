@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.radityodwiki.maptrack.domain.model.Trip
+import com.radityodwiki.maptrack.domain.model.TripSource
 import com.radityodwiki.maptrack.domain.model.TripStatus
 
 @Entity(
@@ -22,6 +23,8 @@ data class TripEntity(
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
     /** Visit algorithm version the trip's visits were computed with; 0 = not yet (PRD §38 Fase 2). */
     @ColumnInfo(name = "visit_detection_version", defaultValue = "0") val visitDetectionVersion: Int = 0,
+    /** `manual` or `auto` (PRD §38 Fase 5); trips from before Fase 5 are `manual`. */
+    @ColumnInfo(name = "source", defaultValue = "manual") val source: String = TripSource.MANUAL.dbValue,
 )
 
 fun TripEntity.toDomain() = Trip(
@@ -33,6 +36,7 @@ fun TripEntity.toDomain() = Trip(
     maxSpeedMps = maxSpeed,
     status = TripStatus.fromDbValue(status),
     updatedAt = updatedAt,
+    source = TripSource.fromDbValue(source),
 )
 
 fun Trip.toEntity() = TripEntity(
@@ -44,4 +48,5 @@ fun Trip.toEntity() = TripEntity(
     maxSpeed = maxSpeedMps,
     status = status.dbValue,
     updatedAt = updatedAt,
+    source = source.dbValue,
 )

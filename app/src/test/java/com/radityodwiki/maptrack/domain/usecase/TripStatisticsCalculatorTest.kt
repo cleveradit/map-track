@@ -2,7 +2,9 @@ package com.radityodwiki.maptrack.domain.usecase
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.random.Random
 
 class TripStatisticsCalculatorTest {
 
@@ -52,5 +54,67 @@ class TripStatisticsCalculatorTest {
         val points = listOf(testPoint(recordedAt = 0), testPoint(latitude = 10 * DEG_PER_METER, recordedAt = 5_000))
 
         assertNull(TripStatisticsCalculator.calculate(points, 0, 5_000).maxSpeedMps)
+    }
+
+    /** Ten minutes still, a fix every 5 s with accuracy 10–30 m scattered up to that accuracy. */
+    private fun stationaryRecording(speed: (Random) -> Float?): List<com.radityodwiki.maptrack.domain.model.LocationPoint> {
+        val random = Random(42)
+        return (0..120).map { i ->
+            val accuracy = 10f + random.nextFloat() * 20f
+            val north = (random.nextDouble() * 2 - 1) * accuracy
+            val east = (random.nextDouble() * 2 - 1) * accuracy
+            testPoint(
+                latitude = north * DEG_PER_METER,
+                longitude = east * DEG_PER_METER,
+                recordedAt = i * 5_000L,
+                accuracy = accuracy,
+                speed = speed(random),
+            )
+        }
+    }
+
+    @Test
+    fun stationaryJitterAddsLessThanFiftyMeters() {
+        val distance = TripStatisticsCalculator.anchoredDistance(stationaryRecording { it.nextFloat() * 0.45f })
+
+        assertTrue("distance was $distance", distance < 50.0)
+    }
+
+    @Test
+    fun withoutSpeedOnlyTheAccuracyRuleApplies() {
+        // Documents the limit of the accuracy rule alone (DEC-008): scattered fixes without speed still add distance.
+        val distance = TripStatisticsCalculator.anchoredDistance(stationaryRecording { null })
+
+        assertTrue("distance was $distance", distance > 50.0)
+    }
+
+    @Test
+    fun stepNotExceedingAccuracyIsNotCounted() {
+        val step = GeoDistance.meters(0.0, 0.0, 10 * DEG_PER_METER, 0.0)
+        // Smallest float accuracy that is not below the step: the step must be strictly larger to count.
+        val accuracy = step.toFloat().let { if (it < step) Math.nextUp(it) else it }
+        val points = listOf(
+            testPoint(accuracy = accuracy),
+            testPoint(latitude = 10 * DEG_PER_METER, recordedAt = 5_000, accuracy = accuracy),
+        )
+
+        assertEquals(0.0, TripStatisticsCalculator.anchoredDistance(points), 0.0)
+        assertEquals(step, TripStatisticsCalculator.anchoredDistance(points.map { it.copy(accuracyMeters = 9f) }), 1e-9)
+    }
+
+    @Test
+    fun slowMovementIsStillCounted() {
+        val points = (0 until 100).map { i -> testPoint(latitude = i * 7 * DEG_PER_METER, recordedAt = i * 5_000L, accuracy = 10f, speed = 1.4f) }
+
+        val distance = TripStatisticsCalculator.anchoredDistance(points)
+
+        assertTrue("distance was $distance", distance >= 0.98 * (99 * 7 - 7))
+    }
+
+    @Test
+    fun gpsGapIsStraightLine() {
+        val points = listOf(testPoint(recordedAt = 0), testPoint(latitude = 1_000 * DEG_PER_METER, recordedAt = 600_000))
+
+        assertEquals(1_000.0, TripStatisticsCalculator.anchoredDistance(points), 0.01)
     }
 }

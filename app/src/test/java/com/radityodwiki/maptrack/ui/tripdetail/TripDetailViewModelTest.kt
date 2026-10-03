@@ -6,7 +6,10 @@ import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
 import com.radityodwiki.maptrack.data.local.entity.VisitEntity
 import com.radityodwiki.maptrack.data.repository.PlaceRepository
 import com.radityodwiki.maptrack.data.repository.TripRepository
+import com.radityodwiki.maptrack.domain.model.AppSettings
+import com.radityodwiki.maptrack.domain.model.DistanceUnit
 import com.radityodwiki.maptrack.domain.model.PlaceInput
+import kotlinx.coroutines.flow.flowOf
 import com.radityodwiki.maptrack.domain.usecase.DEG_PER_METER
 import com.radityodwiki.maptrack.domain.usecase.testPoint
 import kotlinx.coroutines.Dispatchers
@@ -155,5 +158,19 @@ class TripDetailViewModelTest {
             (it as? TripDetailUiState.Loaded)?.visits?.singleOrNull()?.placeName == null
         } as TripDetailUiState.Loaded
         assertEquals(1, state.visits.size)
+    }
+
+    @Test
+    fun imperialSettingsChangeDisplayOnly() = runTest {
+        val repository = TripRepository(database)
+        val trip = repository.startTrip().getOrThrow()
+        repository.completeTrip(trip.id, trip.startedAt + 600_000, 1_000.0, 1.0, 10.0)
+        val imperial = flowOf(AppSettings.DEFAULT.copy(distanceUnit = DistanceUnit.IMPERIAL))
+
+        val state = TripDetailViewModel(trip.id, repository, PlaceRepository(database), imperial).loaded()
+
+        assertEquals("0.6 mi", state.summary.distance)
+        assertEquals("mph", state.speedUnit)
+        assertEquals(1_000.0, repository.getTrip(trip.id)!!.distanceMeters!!, 0.0)
     }
 }

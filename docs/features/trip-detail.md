@@ -37,7 +37,7 @@ Halaman detail dibuka dari item History lewat route `trip/{tripId}`. Isinya ring
 |---|---|
 | `Loading` | Indikator loading |
 | `NotFound` | `Perjalanan tidak ditemukan.` |
-| `Loaded` | Ringkasan, tempat singgah (`visits`), peta rute, grafik |
+| `Loaded` | Ringkasan (label "Otomatis" untuk trip `auto`), tempat singgah (`visits`), peta rute, grafik |
 
 | Peta rute (`TripRouteMap`) | Aturan |
 |---|---|

@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.1 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.2 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -93,14 +93,19 @@ Teknologi utama:
 - Android Foreground Service
 - MapLibre
 - DataStore (mulai Fase 4, §26)
+- Activity Recognition Transition API (mulai Fase 5, §38)
+- Retrofit + OkHttp + kotlinx.serialization (mulai Fase 6, §38)
+- WorkManager untuk sync background (mulai Fase 7, §38)
 
 ## Backend (mulai Fase 6)
 
 - Laravel
-- REST API untuk akun, sync, dan grup
-- Kanal realtime (WebSocket) untuk live sharing
+- REST API untuk akun, sync, dan grup (`/api/v1`)
+- PostgreSQL, Redis
+- Kanal realtime: Laravel Reverb (WebSocket) untuk live sharing
+- Autentikasi: email + password, token Laravel Sanctum per perangkat
 
-Detail backend (versi, database server, layanan realtime, hosting, metode autentikasi) ditetapkan di tiket awal Fase 6.
+Rincian dan alasannya ada di §38 Fase 6. Versi persis dan penyedia VPS ditetapkan di tiket awal Fase 6.
 
 Tidak tersedia client:
 
@@ -152,7 +157,7 @@ Project dikerjakan sampai produk penuh dalam 9 fase berurutan.
 
 Account (Fase 6) dikerjakan sebelum Cloud Backup (Fase 7) karena backup ke server membutuhkan identitas pemilik data.
 
-Bagian §7–§36 dan §39–§43 menjelaskan Fase 1 secara rinci. Fase 2–9 dijelaskan di §38. Detail rinci sebuah fase wajib dilengkapi di PRD ini sebelum fase tersebut mulai dikerjakan.
+Bagian §7–§36 dan §39–§43 menjelaskan Fase 1 secara rinci. Fase 2–9 dijelaskan rinci di §38, termasuk skema data, nilai default, dan acceptance criteria masing-masing. Perubahan detail sebuah fase dicatat di §45 sebelum fase tersebut dikerjakan.
 
 ---
 
@@ -282,7 +287,7 @@ Menekan notification membuka kembali aplikasi.
 
 Isi notification diperbarui setiap ada titik lokasi baru. Jika GPS sementara tidak tersedia, notification menampilkan `Menunggu sinyal GPS…` (lihat §31).
 
-Aplikasi **tidak** meminta permission background location (`ACCESS_BACKGROUND_LOCATION`). Service selalu dimulai dari aksi pengguna saat aplikasi berada di foreground, sehingga permission lokasi foreground ditambah foreground service bertipe `location` sudah cukup. Ini sejalan dengan prinsip privacy-first. Keputusan ini ditinjau ulang di Fase 5, khusus untuk deteksi trip otomatis.
+Aplikasi **tidak** meminta permission background location (`ACCESS_BACKGROUND_LOCATION`). Service selalu dimulai dari aksi pengguna saat aplikasi berada di foreground, sehingga permission lokasi foreground ditambah foreground service bertipe `location` sudah cukup. Ini sejalan dengan prinsip privacy-first. Pengecualiannya hanya trip otomatis di Fase 5: `ACCESS_BACKGROUND_LOCATION` diminta hanya saat pengguna mengaktifkan fitur tersebut (§38 Fase 5). Tracking manual dan Live Sharing tetap tanpa permission ini.
 
 ---
 
@@ -812,25 +817,28 @@ Apabila Trip dihapus, seluruh LocationPoint milik trip tersebut harus ikut dihap
 
 Fase 1–3 tidak memiliki halaman Settings, sehingga DataStore belum dipakai. Seluruh nilai default disimpan sebagai konstanta di source code (§11).
 
-DataStore ditambahkan bersama halaman Settings pada Fase 4. Contoh pengaturan yang disimpan di sana:
+DataStore ditambahkan bersama halaman Settings pada Fase 4. Daftar key, pilihan, dan default ada di §38 Fase 4:
 
 ```text
-tracking_interval
-accuracy_threshold
+tracking_interval_ms
+accuracy_threshold_m
 distance_unit
-map_preferences
+map_follow_location
+offline_download_wifi_only
 ```
 
 ---
 
 # 27. Navigation
 
-Navigation utama:
+Navigation utama Fase 1–2:
 
 ```text
 Home
 History
 ```
+
+Tab **Tempat** ditambahkan di Fase 3 dan tab **Grup** di Fase 8. Settings dibuka dari top app bar Home mulai Fase 4 (§38).
 
 Kemungkinan struktur:
 
@@ -1027,7 +1035,7 @@ Data yang keluar dari perangkat per fase:
 | 6 | Data akun (email, nama, info perangkat). Tidak ada data lokasi. |
 | 7 | Trip dan location point, **hanya** jika pengguna mengaktifkan Cloud Backup |
 | 8 | Data grup dan keanggotaan. Tidak ada data lokasi. |
-| 9 | Lokasi terkini, **hanya** ke anggota grup dan **hanya** selama pengguna mengaktifkan Live Sharing |
+| 9 | Lokasi terkini (latitude, longitude, accuracy, waktu fix), **hanya** ke anggota grup dan **hanya** selama pengguna mengaktifkan Live Sharing. Server hanya menyimpan satu lokasi terakhir dan menghapusnya saat sharing berhenti |
 
 Request tile dan unduhan wilayah peta tidak membawa koordinat GPS maupun data trip.
 
@@ -1098,169 +1106,632 @@ Fitur berikut **tidak dikembangkan** di fase mana pun. Menambahkannya berarti me
 
 # 38. Fase Pengembangan 2–9
 
-Bagian ini menjelaskan scope tiap fase lanjutan. Sebelum fase dimulai, requirement rinci, skema data, dan acceptance criteria fase tersebut harus dilengkapi di sini.
+Bagian ini berisi requirement rinci, skema data, nilai default, dan acceptance criteria tiap fase lanjutan. Semua keputusan di sini tunduk pada §1–§3: offline-first, local-first, privacy-first, battery-aware, dan bertahap.
+
+Konvensi yang berlaku di semua fase (sama dengan Fase 1, §24):
+
+- Waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dalam meter.
+- Nilai default berupa konstanta di satu objek konfigurasi per fitur (mengikuti pola `TrackingConfig`), bukan angka tersebar.
+- Perubahan skema Room selalu lewat migrasi berversi dan skema terekspor. Data lama tidak boleh hilang.
+- Tiket boleh menyesuaikan nilai default setelah pengujian di perangkat. Perubahan tersebut dicatat di §45.
+
+---
 
 ## Fase 2 — Place Detection
 
-Mendeteksi saat pengguna berhenti cukup lama di satu area dan mencatatnya sebagai **visit**.
+### Tujuan
 
-Contoh:
+Mendeteksi saat pengguna berhenti cukup lama di satu area dan mencatatnya sebagai **visit**. Ini memenuhi tujuan §2 poin 11 (bagian deteksi) dan kebutuhan §5 "mengetahui berapa lama berada di suatu tempat".
+
+Contoh tampilan (nama tempat baru tersedia di Fase 3):
 
 ```text
 08:15 - 16:30
-LHI School
+Tempat singgah · 8 jam 15 menit
 ```
 
-Scope:
+### Keputusan
 
-- visit dideteksi dari location point yang terekam selama tracking, yaitu titik-titik yang berada dalam radius tertentu selama durasi minimum tertentu (nilai default ditetapkan di tiket);
-- tabel baru untuk visit (waktu datang, waktu pergi, titik pusat);
-- visit ditampilkan di Trip Detail sebagai marker tempat singgah dan sebagai daftar.
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Kapan deteksi berjalan | Sekali saat trip diselesaikan (Stop, Stop dari notification, atau Akhiri Trip terputus), di transaksi yang sama dengan statistik (§8.2) | Battery-aware: tidak ada kerja tambahan selama tracking; logika dapat dites di JVM |
+| Visit pada trip aktif | Tidak ditampilkan | Konsisten dengan statistik yang juga baru ada setelah trip selesai |
+| Sifat data visit | **Data turunan** dari location point; dapat dihitung ulang kapan saja | Location point tetap sumber kebenaran (local-first); algoritma dapat diperbaiki tanpa kehilangan data |
+| Sinkronisasi visit (Fase 7) | Tidak disinkronkan; setiap perangkat menghitung ulang dari location point | Mengurangi kompleksitas sync |
+| Sumber titik | Semua location point tersimpan (sudah lolos filter §12) | Tidak perlu filter tambahan |
 
-Catatan: pada fase ini visit hanya terdeteksi selama tracking aktif. Cakupannya menjadi lebih lengkap setelah trip otomatis tersedia di Fase 5.
+### Nilai default (`PlaceDetectionConfig`)
+
+| Parameter | Default | Arti |
+|---|---|---|
+| `VISIT_RADIUS_METERS` | 100 m | Titik masih dianggap di tempat yang sama bila berjarak ≤ radius ini dari pusat cluster |
+| `MIN_VISIT_DURATION_MS` | 5 menit | Durasi minimum agar cluster menjadi visit |
+| `MERGE_GAP_MS` | 5 menit | Dua visit berurutan digabung bila jeda antar-keduanya ≤ nilai ini |
+| `MERGE_DISTANCE_METERS` | 100 m | ... dan jarak antar-pusatnya ≤ nilai ini |
+| `DETECTION_VERSION` | 1 | Versi algoritma; dinaikkan bila algoritma berubah agar trip lama dihitung ulang |
+
+### Algoritma
+
+Input: location point satu trip, urut `recorded_at`. Jarak memakai haversine (§17).
+
+1. Mulai cluster dari titik pertama yang belum diproses. Pusat cluster = rata-rata latitude/longitude anggotanya.
+2. Tambahkan titik berikutnya ke cluster selama jaraknya ke pusat cluster ≤ `VISIT_RADIUS_METERS`. Pusat dihitung ulang setiap ada anggota baru.
+3. Saat titik berikutnya keluar radius (atau titik habis), cluster ditutup. Bila `recorded_at` anggota terakhir − `recorded_at` anggota pertama ≥ `MIN_VISIT_DURATION_MS`, cluster menjadi visit. Proses diulang dari titik yang keluar radius.
+4. Visit berurutan yang memenuhi `MERGE_GAP_MS` dan `MERGE_DISTANCE_METERS` digabung. Ini meredam satu-dua titik melenceng di tengah singgahan.
+
+Hasil per visit: `arrived_at` = titik pertama, `departed_at` = titik terakhir, pusat = rata-rata seluruh titik visit, `point_count`.
+
+Aturan kasus tepi:
+
+| Kasus | Perilaku |
+|---|---|
+| GPS hilang selama singgah (misalnya di dalam gedung), lalu titik berikutnya masih dalam radius | Visit berlanjut; jeda waktu tanpa titik ikut dihitung sebagai durasi |
+| Trip diawali dengan diam | Visit tercatat dengan `arrived_at` = titik pertama trip (waktu datang sebenarnya tidak diketahui) |
+| Trip diakhiri dengan diam | Visit tercatat dengan `departed_at` = titik terakhir trip |
+| Trip < 2 titik | Tidak ada visit |
+| Trip lama (dibuat sebelum Fase 2) | Dihitung otomatis di background sekali saat aplikasi dibuka, untuk trip `completed` dengan `visit_detection_version` < `DETECTION_VERSION` |
+
+### Skema data
+
+Migrasi Room versi 1 → 2.
+
+Tabel baru `visits`:
+
+| Field | Tipe | Aturan |
+|---|---|---|
+| `id` | Long | Primary key, auto-increment (lokal; data turunan) |
+| `trip_id` | String | Wajib, FK → `trips.id`, `ON DELETE CASCADE` |
+| `arrived_at` | Long | Wajib |
+| `departed_at` | Long | Wajib, ≥ `arrived_at` |
+| `center_latitude` | Double | Wajib |
+| `center_longitude` | Double | Wajib |
+| `point_count` | Int | Wajib, ≥ 1 |
+
+Index: `trip_id`, dan unik (`trip_id`, `arrived_at`).
+
+Kolom baru di `trips`: `visit_detection_version` (Int, wajib, default `0`). Diisi `DETECTION_VERSION` setelah visit trip tersebut dihitung. Kolom ini tidak mengubah `updated_at` karena bukan perubahan data milik pengguna.
+
+Menghitung ulang visit sebuah trip = hapus semua visit trip tersebut lalu insert hasil baru, dalam satu transaksi.
+
+### Tampilan
+
+- **Trip Detail — peta:** marker tempat singgah, berbeda bentuk/warna dari marker start dan finish (§20).
+- **Trip Detail — daftar "Tempat singgah":** di bawah ringkasan. Tiap item menampilkan jam datang–pergi dan durasi. Menekan item memusatkan peta ke marker tersebut.
+- Trip tanpa visit tidak menampilkan bagian daftar.
+- History tidak berubah.
+
+### Acceptance Criteria Fase 2
+
+- Trip yang diselesaikan lewat Stop, Stop dari notification, maupun Akhiri Trip menghasilkan visit sesuai algoritma, dalam transaksi yang sama dengan statistik.
+- Diam ≥ 5 menit dalam radius 100 m menghasilkan tepat satu visit; diam < 5 menit tidak menghasilkan visit (boundary).
+- Satu titik melenceng di tengah singgahan tidak memecah visit menjadi dua.
+- Trip dengan < 2 titik tidak menghasilkan visit dan tidak menyebabkan error (failure case).
+- Menghapus trip ikut menghapus visit-nya.
+- Trip yang dibuat sebelum Fase 2 mendapat visit setelah aplikasi dibuka, tanpa menghapus data apa pun; migrasi 1 → 2 dites.
+- Visit tampil di Trip Detail sebagai marker dan sebagai daftar.
+- Semua berjalan tanpa internet.
+
+### Tidak termasuk Fase 2
+
+Nama tempat (Fase 3), visit di luar tracking (Fase 5), visit pada trip aktif, statistik visit lintas trip (Fase 3).
 
 ---
 
 ## Fase 3 — Saved Places
 
-Pengguna dapat membuat tempat bernama, misalnya:
+### Tujuan
 
-```text
-Rumah
-Kantor
-Sekolah
-Gym
-```
+Pengguna membuat tempat bernama (misalnya Rumah, Kantor, Sekolah, Gym). Visit yang berada di dalam radius tempat tersebut otomatis diberi namanya. Ini memenuhi tujuan §2 poin 11 (bagian memberi nama).
 
-Scope:
+### Keputusan
 
-- membuat, mengubah, dan menghapus tempat dengan memilih titik di peta dan menentukan radius;
-- visit yang berada dalam radius sebuah tempat otomatis diberi nama tempat tersebut;
-- tanpa reverse geocoding online; nama tempat selalu diisi pengguna.
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Cara visit diberi nama | Dicocokkan saat ditampilkan (bukan disimpan sebagai kolom di `visits`) | Mengubah atau menghapus tempat langsung berlaku ke semua visit lama; visit tetap data turunan |
+| Aturan cocok | Pusat visit berada dalam radius tempat (haversine ≤ `radius_meters`). Bila lebih dari satu tempat cocok, dipilih tempat dengan pusat terdekat | Deterministik dan sederhana |
+| Tempat saling tumpang tindih | Diizinkan | Pengguna bebas; aturan "terdekat" menyelesaikan konflik |
+| Nama tempat | Selalu diisi pengguna; tanpa reverse geocoding online (§37) | Privacy-first |
+| ID tempat | UUID v4 dibuat di perangkat, `updated_at` dipelihara | Tempat adalah data milik pengguna yang disinkronkan di Fase 7 (Rule sync-ready seperti trip) |
+
+### Nilai default (`PlaceConfig`)
+
+| Parameter | Default |
+|---|---|
+| `DEFAULT_RADIUS_METERS` | 100 m |
+| `MIN_RADIUS_METERS` / `MAX_RADIUS_METERS` | 50 m / 1 000 m |
+| `NAME_MAX_LENGTH` | 50 karakter |
+
+### Skema data
+
+Migrasi Room versi 2 → 3. Tabel baru `places`:
+
+| Field | Tipe | Aturan |
+|---|---|---|
+| `id` | String | Primary key, UUID v4 |
+| `name` | String | Wajib, di-trim, 1–50 karakter, tidak harus unik |
+| `latitude` | Double | Wajib |
+| `longitude` | Double | Wajib |
+| `radius_meters` | Double | Wajib, 50–1 000 |
+| `created_at` | Long | Wajib |
+| `updated_at` | Long | Wajib, diperbarui setiap baris berubah |
+
+Tidak ada relasi FK dari `visits` ke `places`.
+
+### Fitur
+
+1. **Daftar tempat:** tab navigasi baru **Tempat** (navigasi utama menjadi Home, History, Tempat). Menampilkan nama, radius, jumlah kunjungan, dan kunjungan terakhir. Diurutkan berdasarkan nama.
+2. **Buat tempat:** pilih titik dengan menggeser peta (pin tetap di tengah layar) atau tombol "Pakai lokasi saat ini"; atur radius dengan slider; lingkaran radius tampil di peta; isi nama. Juga dapat dibuat dari item visit di Trip Detail lewat aksi **Simpan sebagai tempat** (titik = pusat visit).
+3. **Ubah tempat:** nama, titik, dan radius.
+4. **Hapus tempat:** dengan konfirmasi. Visit tidak ikut terhapus, hanya kehilangan nama.
+5. **Detail tempat:** peta dengan lingkaran radius, total kunjungan, total durasi, dan daftar kunjungan (tanggal, jam datang–pergi, durasi; menekan item membuka Trip Detail terkait). Data diambil dari visit semua trip yang cocok dengan tempat ini.
+6. **Trip Detail:** visit yang cocok menampilkan nama tempat; yang tidak cocok tetap "Tempat singgah".
+
+Membuat tempat tidak membutuhkan permission lokasi kecuali saat memakai "Pakai lokasi saat ini". Peta yang tidak termuat (offline) tidak menghalangi pembuatan tempat dari visit.
+
+### Acceptance Criteria Fase 3
+
+- Pengguna dapat membuat, mengubah, dan menghapus tempat tanpa internet.
+- Nama kosong atau > 50 karakter ditolak; radius di luar 50–1 000 m tidak dapat dipilih (boundary).
+- Visit yang pusatnya tepat di dalam radius diberi nama tempat; yang di luar radius tidak.
+- Dua tempat yang tumpang tindih: visit diberi nama tempat dengan pusat terdekat.
+- Mengubah radius atau menghapus tempat langsung memperbarui nama visit di Trip Detail dan Detail Tempat.
+- Menghapus tempat tidak menghapus trip maupun visit (failure case: tidak ada data hilang).
+- Detail tempat menampilkan total kunjungan dan total durasi yang sesuai dengan visit.
+- Migrasi 2 → 3 dites.
+
+### Tidak termasuk Fase 3
+
+Deteksi Home/Work otomatis, reverse geocoding, geofence alert (§37), kategori/ikon tempat, impor tempat.
 
 ---
 
 ## Fase 4 — Offline Map & Settings
 
-Scope:
+### Tujuan
 
-- pengguna memilih area di peta lalu mengunduhnya untuk penggunaan offline;
-- daftar wilayah terunduh beserta ukurannya, dan opsi menghapus wilayah;
-- wilayah yang sudah diunduh tampil tanpa internet;
-- halaman Settings + DataStore: interval tracking, ambang accuracy, satuan jarak, preferensi peta.
+Peta tetap tampil tanpa internet untuk wilayah yang sudah diunduh (tujuan §2 poin 12), dan pengguna dapat mengatur parameter utama lewat halaman Settings.
 
-Contoh:
+### Keputusan
 
-```text
-Offline Maps
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Mekanisme unduhan | MapLibre Offline (`OfflineManager`), style yang sama dengan peta online | Tanpa dependensi baru |
+| Penyimpanan metadata wilayah | Database offline MapLibre (nama, ukuran, status disimpan di metadata region), bukan Room | Satu sumber kebenaran untuk wilayah |
+| Rentang zoom unduhan | 10–14 (tile vektor overzoom di atas 14) | Cukup detail untuk jalan dan bangunan dengan ukuran wajar |
+| Batas ukuran wilayah | Maksimal 20 000 tile per wilayah (estimasi sebelum unduh) | Mencegah unduhan raksasa; ukuran ditampilkan sebelum unduh |
+| Jaringan | Setting "Unduh peta hanya via Wi-Fi", default **aktif** | Hemat kuota |
+| Proses unduhan | Berjalan selama aplikasi hidup; jika proses dihentikan, unduhan dilanjutkan saat halaman Offline Maps dibuka lagi | Tidak menambah foreground service |
+| Lisensi tile | Tiket pertama Fase 4 wajib memverifikasi bahwa OpenFreeMap mengizinkan unduhan offline. Jika tidak, tiket memilih sumber tile lain yang tanpa akun/API key dan mengizinkan offline, lalu merevisi §22 | Kepatuhan lisensi |
+| Settings | DataStore Preferences (§26) | Sesuai keputusan v1.1 |
+| Perubahan setting tracking saat trip aktif | Berlaku mulai trip berikutnya; Settings menampilkan keterangan ini | Satu trip memakai parameter yang konsisten |
 
-Yogyakarta
-Downloaded
-184 MB
+### Offline Maps
 
-Surabaya
-Not Downloaded
+1. Halaman **Offline Maps** dibuka dari Settings.
+2. Tambah wilayah: pengguna menggeser/zoom peta, area yang terlihat di layar menjadi wilayah unduhan. Aplikasi menampilkan estimasi jumlah tile dan ukuran. Tombol Download nonaktif bila melebihi batas.
+3. Nama wilayah wajib (default `Wilayah <tanggal>`), 1–50 karakter.
+4. Daftar wilayah: nama, status (`Mengunduh n%`, `Terunduh`, `Gagal`, `Dijeda`), ukuran.
+5. Hapus wilayah dengan konfirmasi; ruang penyimpanan dibebaskan.
+6. Wilayah terunduh tampil tanpa internet di Home, Trip Detail, dan Tempat.
+7. Kegagalan unduhan tidak memengaruhi tracking.
 
-[ Download ]
-```
+### Settings
 
-Catatan: sumber tile harus mengizinkan unduhan offline. Lisensinya diperiksa di tiket fase ini.
+| Key DataStore | Pilihan | Default |
+|---|---|---|
+| `tracking_interval_ms` | 3 s, 5 s, 10 s, 30 s | 5 s |
+| `accuracy_threshold_m` | 20 m, 30 m, 50 m, 100 m | 50 m |
+| `distance_unit` | Metrik (km, km/h) / Imperial (mi, mph) | Metrik |
+| `map_follow_location` | Kamera Home mengikuti posisi: aktif/nonaktif | Aktif |
+| `offline_download_wifi_only` | aktif/nonaktif | Aktif |
+
+Aturan:
+
+- Database tetap menyimpan meter dan m/s (§13). Satuan hanya memengaruhi tampilan.
+- Batas GPS jump dan stale timeout tetap konstanta di `TrackingConfig`.
+- Parameter tracking dibaca saat Start dan dipakai sampai trip selesai.
+- Settings juga berisi bagian **Tentang**: versi aplikasi, atribusi peta, dan pernyataan privasi singkat ("Data lokasi hanya disimpan di perangkat").
+- Settings dibuka dari ikon di top app bar Home.
+
+### Acceptance Criteria Fase 4
+
+- Pengguna dapat mengunduh wilayah, melihat daftar beserta ukurannya, dan menghapusnya.
+- Dengan mode pesawat, wilayah terunduh tetap tampil; di luar wilayah, peta kosong tetapi tracking tetap berjalan.
+- Wilayah yang melebihi 20 000 tile tidak dapat diunduh (boundary).
+- Unduhan yang terputus (jaringan hilang) berstatus gagal/dijeda dan dapat dilanjutkan (failure case).
+- Mengubah interval saat trip aktif tidak mengubah trip yang sedang berjalan; trip berikutnya memakai interval baru.
+- Ambang accuracy baru dipakai filter §12 pada trip berikutnya.
+- Satuan imperial mengubah semua tampilan jarak dan kecepatan tanpa mengubah data tersimpan.
+- Setting bertahan setelah aplikasi ditutup dan dibuka kembali.
+
+### Tidak termasuk Fase 4
+
+Pilihan gaya peta lain, sinkronisasi setting antarperangkat, unduhan wilayah otomatis.
 
 ---
 
 ## Fase 5 — Automatic Trip & Tracking Improvements
 
-Scope:
+### Tujuan
 
-- trip dimulai dan diakhiri otomatis berdasarkan pergerakan pengguna (misalnya dengan Activity Recognition Transition API);
-- fitur trip otomatis dapat dinyalakan dan dimatikan, sedangkan Start/Stop manual tetap tersedia;
-- melanjutkan trip yang terputus (§33);
-- peredam jitter GPS saat pengguna diam (§12);
-- optimasi baterai dan GPS.
+Mencatat perjalanan tanpa menekan Start (tujuan §2 poin 13), melanjutkan trip terputus, meredam jitter GPS, dan menghemat baterai.
 
-Catatan permission: trip otomatis kemungkinan memerlukan `ACTIVITY_RECOGNITION` dan `ACCESS_BACKGROUND_LOCATION`. Kedua permission ini hanya diminta ketika pengguna mengaktifkan trip otomatis, dan keputusan di §9 ditinjau ulang di fase ini.
+### Keputusan
+
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Pemicu start otomatis | Activity Recognition Transition API: `ENTER` aktivitas `IN_VEHICLE` atau `ON_BICYCLE`. `WALKING`/`RUNNING` hanya bila pengguna mengaktifkan opsi "Termasuk berjalan kaki" (default nonaktif) | Berjalan di dalam rumah terlalu sering memicu trip palsu |
+| Default trip otomatis | **Nonaktif** (opt-in) | Privacy-first, battery-aware |
+| Permission | `ACTIVITY_RECOGNITION` dan `ACCESS_BACKGROUND_LOCATION` diminta **hanya** saat pengguna mengaktifkan trip otomatis, masing-masing dengan penjelasan terlebih dahulu. Jika salah satu ditolak, trip otomatis tetap nonaktif | Revisi §9: tracking manual tetap tanpa background location |
+| Dasar hukum start dari background | Android mengizinkan foreground service dimulai dari background ketika aplikasi menerima event activity recognition transition; tipe `location` dari background membutuhkan background location | Persyaratan platform |
+| Asal trip | Kolom baru `trips.source`: `manual` / `auto` | History menandai trip otomatis |
+| Start otomatis saat ada trip `active` | Diabaikan | Satu trip aktif (§8.1) |
+| Trip manual | Tidak pernah dihentikan otomatis | Kendali tetap di pengguna |
+
+### Nilai default (`AutoTripConfig`)
+
+| Parameter | Default | Arti |
+|---|---|---|
+| `AUTO_STOP_STILL_MS` | 5 menit | Trip otomatis berhenti bila diam selama ini |
+| `AUTO_STOP_RADIUS_METERS` | 100 m | "Diam" = semua titik dalam rentang `AUTO_STOP_STILL_MS` terakhir berada dalam radius ini, atau Activity Recognition melaporkan `STILL` tanpa transisi gerak sejak itu |
+| `MIN_AUTO_TRIP_DISTANCE_METERS` | 300 m | Trip otomatis yang lebih pendek dihapus otomatis setelah berhenti |
+| `MIN_AUTO_TRIP_DURATION_MS` | 2 menit | ... atau yang lebih singkat dari ini |
+| `RESUME_MAX_GAP_MS` | 60 menit | Batas jeda agar trip terputus masih dapat dilanjutkan |
+| `STATIONARY_INTERVAL_MS` | 30 detik | Interval GPS saat terdeteksi diam selama tracking |
+| `STATIONARY_SPEED_MPS` | 0,5 m/s | Ambang kecepatan "diam" untuk penghemat baterai |
+
+### Trip otomatis
+
+1. Toggle **Trip otomatis** di Settings, beserta opsi "Termasuk berjalan kaki".
+2. Saat transisi gerak diterima dan tidak ada trip aktif, aplikasi memulai trip `source = auto` dan foreground service seperti §8.1 langkah 5–9.
+3. Notification menampilkan "Perjalanan otomatis" dan tombol Stop. Stop manual berlaku normal.
+4. Saat kondisi diam terpenuhi, trip otomatis diakhiri seperti Stop (§8.2) dengan `ended_at` = `recorded_at` titik terakhir. Durasi trip ikut mencakup waktu diam tersebut, dan titik diam tetap dipakai deteksi visit (singgahan di tujuan tercatat).
+5. Trip otomatis di bawah batas minimum jarak atau durasi dihapus beserta titiknya, tanpa notifikasi.
+6. History dan Trip Detail menampilkan label "Otomatis" untuk trip `source = auto`.
+7. Mematikan toggle menghentikan langganan transisi; trip otomatis yang sedang berjalan tetap berjalan sampai dihentikan.
+8. Bila permission dicabut dari pengaturan sistem, toggle otomatis menjadi nonaktif saat aplikasi dibuka berikutnya, disertai keterangan.
+
+### Melanjutkan trip terputus
+
+Dialog §33 mendapat tombol **Lanjutkan** di samping **Akhiri Trip**:
+
+- Hanya tersedia bila `recorded_at` titik terakhir (atau `started_at` bila tidak ada titik) ≤ `RESUME_MAX_GAP_MS` dari sekarang. Di luar batas itu hanya Akhiri Trip yang tersedia.
+- Lanjutkan menjalankan foreground service untuk trip yang sama, dengan pemeriksaan permission dan layanan lokasi seperti §8.1.
+- Jeda tanpa titik diperlakukan sama seperti kehilangan sinyal GPS (§31): jarak antara titik terakhir dan titik pertama setelah lanjut dihitung garis lurus.
+- Invarian DEC-001 tetap berlaku: state `Active` ditetapkan sebelum service berjalan.
+
+### Peredam jitter
+
+- Titik tetap disimpan semua (deteksi visit membutuhkan titik saat diam).
+- Perhitungan jarak (§17) memakai **titik jangkar**: jarak hanya ditambahkan bila jarak dari titik jangkar ke titik baru > `max(accuracy jangkar, accuracy titik baru)`; titik baru itu lalu menjadi jangkar. Titik pertama adalah jangkar awal.
+- Hanya berlaku untuk trip yang diselesaikan setelah Fase 5. Statistik trip lama tidak dihitung ulang agar histori tetap stabil.
+
+### Penghemat baterai
+
+- Selama tracking, bila kecepatan < `STATIONARY_SPEED_MPS` dan titik tetap dalam radius 100 m selama 2 menit, request lokasi diturunkan ke `STATIONARY_INTERVAL_MS` dengan prioritas `BALANCED_POWER_ACCURACY`.
+- Kembali ke interval normal dan `HIGH_ACCURACY` begitu titik keluar radius atau kecepatan ≥ `STATIONARY_SPEED_MPS`.
+- Langganan Activity Recognition memakai Transition API (berbasis event), bukan polling.
+
+### Skema data
+
+Migrasi Room 3 → 4: kolom `trips.source` (String, wajib, default `manual` untuk data lama).
+
+### Acceptance Criteria Fase 5
+
+- Dengan trip otomatis aktif, mulai berkendara memulai trip tanpa membuka aplikasi; berhenti ≥ 5 menit mengakhirinya.
+- Trip otomatis 250 m atau 90 detik dihapus otomatis; 300 m dan 2 menit dipertahankan (boundary).
+- Menolak `ACCESS_BACKGROUND_LOCATION` membuat trip otomatis tetap nonaktif, sementara tracking manual tetap berfungsi (failure case).
+- Trip manual tidak pernah dihentikan otomatis.
+- Trip terputus 30 menit lalu dapat dilanjutkan; 90 menit lalu hanya dapat diakhiri.
+- Rekaman uji diam 10 menit dengan jitter GPS (accuracy 10–30 m) menambah jarak < 50 m.
+- Interval GPS turun saat diam dan kembali normal saat bergerak.
+- Migrasi 3 → 4 dites; trip lama berlabel manual.
+
+### Tidak termasuk Fase 5
+
+Driving detection sebagai fitur tersendiri (§37), deteksi moda transportasi untuk ditampilkan, start otomatis tanpa izin pengguna.
 
 ---
 
 ## Fase 6 — Account
 
-Scope:
+### Tujuan
 
-- backend Laravel + REST API;
-- register, login, logout;
-- hapus akun beserta seluruh data di server;
-- device management: daftar perangkat yang sedang login dan logout perangkat dari jarak jauh;
-- login bersifat opsional; tanpa login aplikasi tetap berfungsi seperti Fase 1–5.
+Menyediakan identitas pemilik data sebagai dasar Cloud Backup, Group, dan Live Sharing. Login tetap opsional: tanpa akun aplikasi berfungsi persis seperti Fase 1–5.
 
-Metode autentikasi ditetapkan di tiket awal fase.
+### Keputusan teknis backend
+
+| Area | Keputusan | Alasan |
+|---|---|---|
+| Framework | Laravel versi stabil terbaru saat tiket awal Fase 6 dibuat | §4 |
+| Database server | PostgreSQL | Andal untuk data relasional dan volume titik lokasi |
+| Cache/queue | Redis | Antrean email dan rate limiting |
+| Realtime (dipakai Fase 9) | Laravel Reverb (WebSocket, protokol Pusher) | First-party Laravel, dapat di-host sendiri tanpa layanan pihak ketiga |
+| Autentikasi | Email + password, token Laravel Sanctum per perangkat | Tanpa ketergantungan layanan login pihak ketiga |
+| Verifikasi email | Wajib sebelum Cloud Backup dan Group dapat dipakai | Mencegah data tersimpan di akun dengan email salah ketik |
+| Hosting | Satu VPS (region terdekat dengan pengguna), Docker Compose, HTTPS (TLS) wajib, enkripsi disk | Sederhana dan murah; data tidak diserahkan ke layanan pihak ketiga selain penyedia VPS |
+| Versi API | Prefix `/api/v1` | Kompatibilitas aplikasi lama |
+| Client HTTP | Retrofit + OkHttp + kotlinx.serialization | Standar Android, mudah dites |
+| Penyimpanan token di perangkat | DataStore terenkripsi dengan kunci AES-GCM di Android Keystore | §36 Security |
+
+### Fitur
+
+1. **Register:** nama tampilan (1–50 karakter), email, password (min. 8 karakter). Email verifikasi dikirim.
+2. **Login / logout.** Login membuat token baru untuk perangkat ini dan mendaftarkan perangkat.
+3. **Logout:** menghapus token di server dan di perangkat. Data lokal **tidak** dihapus (local-first). Dialog logout menyediakan opsi "Hapus juga data di perangkat ini" (default tidak dicentang).
+4. **Lupa password:** tautan reset via email.
+5. **Device management:** daftar perangkat yang sedang login (nama model, versi aplikasi, terakhir aktif, penanda "perangkat ini"). Pengguna dapat me-logout perangkat lain. Perangkat yang di-logout jarak jauh mendeteksi `401` pada request berikutnya lalu kembali ke mode tanpa akun; data lokalnya tetap ada.
+6. **Hapus akun:** konfirmasi dengan password. Server menghapus akun, perangkat, token, dan seluruh data (backup, keanggotaan grup, lokasi live) secara permanen dan segera. Grup milik pengguna dialihkan ke anggota terlama; grup tanpa anggota lain dihapus. Data lokal di perangkat tidak dihapus.
+7. **Halaman Akun** dibuka dari Settings. Tanpa login, halaman ini menawarkan login/register beserta penjelasan bahwa akun bersifat opsional.
+
+### Skema server
+
+| Tabel | Field utama |
+|---|---|
+| `users` | `id`, `name`, `email` (unik), `email_verified_at`, `password`, `cloud_backup_enabled` (Fase 7), `created_at`, `updated_at` |
+| `devices` | `id`, `user_id`, `name`, `platform`, `app_version`, `last_seen_at`, `created_at` |
+| `personal_access_tokens` | Tabel Sanctum, satu token per `device_id` |
+
+### Endpoint
+
+| Method | Path | Fungsi |
+|---|---|---|
+| POST | `/auth/register` | Daftar |
+| POST | `/auth/login` | Login, mengembalikan token + device id |
+| POST | `/auth/logout` | Revoke token perangkat ini |
+| POST | `/auth/forgot-password`, `/auth/email/resend` | Reset password, kirim ulang verifikasi |
+| GET | `/me` | Profil dan status verifikasi |
+| GET | `/devices` | Daftar perangkat |
+| DELETE | `/devices/{id}` | Logout perangkat lain |
+| DELETE | `/me` | Hapus akun (body: password) |
+
+### Aturan
+
+- Tidak ada data lokasi yang dikirim di fase ini (§35).
+- Login dibatasi 5 percobaan per menit per email + IP.
+- Request jaringan tidak pernah dijalankan di thread atau coroutine milik tracking. Kegagalan jaringan hanya memengaruhi halaman Akun.
+
+### Acceptance Criteria Fase 6
+
+- Tanpa login, seluruh fitur Fase 1–5 bekerja seperti sebelumnya.
+- Register, verifikasi email, login, dan logout berfungsi.
+- Password 7 karakter ditolak; 8 karakter diterima (boundary).
+- Login dengan password salah menampilkan pesan error; percobaan ke-6 dalam satu menit ditolak (failure case).
+- Logout tidak menghapus trip lokal kecuali opsi hapus dicentang.
+- Logout jarak jauh membuat perangkat lain kembali ke mode tanpa akun pada request berikutnya.
+- Hapus akun menghapus seluruh data server pengguna tersebut.
+- Token tidak tersimpan dalam bentuk teks biasa di perangkat.
+- Semua komunikasi memakai HTTPS.
+
+### Tidak termasuk Fase 6
+
+Login pihak ketiga (Google dan lain-lain), two-factor authentication, mengganti email, panel admin.
 
 ---
 
 ## Fase 7 — Cloud Backup & Sync
 
-Arsitektur:
+### Tujuan
 
-```text
-Room
- ↓
-Sync
- ↓
-Backend
-```
+Membackup data ke cloud dan memakainya di perangkat lain (tujuan §2 poin 14). Room tetap sumber data utama; server hanya salinan (local-first).
 
-Room tetap menjadi sumber data lokal.
+### Keputusan
 
-Scope:
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Syarat | Login, email terverifikasi, dan Cloud Backup diaktifkan secara eksplisit. Default nonaktif | Privacy-first (§3) |
+| Cakupan status Cloud Backup | Per akun (`users.cloud_backup_enabled`), bukan per perangkat | Semua perangkat akun yang sama berperilaku konsisten |
+| Data yang disinkronkan | `trips` (hanya `completed`) beserta `location_points`, dan `places` | Data milik pengguna |
+| Tidak disinkronkan | Trip `active`, `visits` (dihitung ulang dari titik), Settings, wilayah offline | Data turunan atau khusus perangkat |
+| Mekanisme background | WorkManager dengan constraint jaringan tersedia | Retry dan backoff bawaan; tidak mengganggu tracking |
+| Pemicu sync | Trip selesai, perubahan/hapus tempat, aplikasi dibuka, periodik setiap 6 jam | Data cepat tercadang tanpa polling agresif |
+| Identitas data | Trip dan tempat: UUID; titik: (`trip_id`, `recorded_at`) | Upload idempoten, tanpa duplikasi (§36) |
+| Konflik | Trip selesai bersifat immutable, sehingga satu-satunya perubahan adalah hapus (hapus selalu menang). Tempat: last-write-wins berdasarkan `updated_at`, termasuk tombstone hapus | Sederhana dan dapat diprediksi |
+| Enkripsi | TLS saat transit dan enkripsi disk server. Tanpa end-to-end encryption | Kompleksitas E2E tidak sebanding untuk fase ini |
 
-- opt-in dan hanya untuk pengguna yang login;
-- trip yang sudah selesai beserta location point-nya diunggah ke server;
-- trip yang dihapus di perangkat juga dihapus di server;
-- restore data di perangkat baru setelah login;
-- sync antarperangkat milik akun yang sama tanpa duplikasi (UUID trip, §24);
-- sync berjalan di background hanya ketika ada jaringan dan tidak mengganggu tracking;
-- saat Cloud Backup dimatikan, pengguna memilih apakah data di server ikut dihapus.
+### Perubahan skema lokal
+
+Migrasi Room 4 → 5:
+
+| Tabel | Kolom baru | Arti |
+|---|---|---|
+| `trips` | `deleted_at` (Long?) | Tombstone: trip disembunyikan dari UI dan titiknya sudah dihapus, menunggu konfirmasi hapus dari server |
+| `trips` | `synced_at` (Long?) | Waktu terakhir server mengonfirmasi trip ini; `NULL` = belum terupload |
+| `places` | `deleted_at` (Long?), `synced_at` (Long?) | Sama seperti di atas |
+
+Aturan hapus:
+
+- Cloud Backup **nonaktif**: hapus permanen seperti Fase 1.
+- Cloud Backup **aktif**: baris diberi `deleted_at`, titik/visit dihapus, lalu baris dihapus permanen setelah server mengonfirmasi.
+
+### Alur sync
+
+1. **Push:** trip `completed` dengan `synced_at IS NULL` diupload bersama titiknya (titik dikirim dalam chunk 1 000 lalu trip difinalisasi). Tempat dengan `updated_at > synced_at` atau belum pernah sync diupload. Tombstone dikirim sebagai hapus.
+2. **Pull:** `GET /sync/changes?cursor=…` mengembalikan trip, tempat, dan penghapusan sejak cursor terakhir (cursor = versi monotonic yang diberikan server). Trip baru diunduh lengkap dengan titiknya, lalu visit dihitung ulang secara lokal.
+3. Cursor disimpan di DataStore setelah satu batch pull berhasil diterapkan dalam transaksi.
+4. Server melakukan upsert berdasarkan ID, sehingga mengirim ulang data yang sama tidak menghasilkan duplikat.
+
+### Fitur
+
+1. **Aktifkan Cloud Backup** (halaman Akun): dialog menjelaskan data apa yang diupload dan ke mana. Setelah aktif, seluruh trip `completed` dan tempat yang sudah ada diupload.
+2. **Restore di perangkat baru:** setelah login, bila Cloud Backup akun aktif, aplikasi bertanya "Pulihkan data dari cloud?". Data diunduh dan digabung dengan data lokal (tidak menimpa).
+3. **Status sync:** halaman Akun menampilkan waktu sync terakhir, jumlah data menunggu upload, dan error terakhir. Tersedia tombol "Sync sekarang".
+4. **Matikan Cloud Backup:** pengguna memilih "Simpan data di server" atau "Hapus data di server". Data lokal tidak terpengaruh.
+5. **Login ke akun berbeda** di perangkat yang datanya pernah dicadangkan ke akun lain: aplikasi menampilkan peringatan sebelum menggabungkan data lokal ke akun baru.
+
+### Skema server
+
+| Tabel | Field utama |
+|---|---|
+| `trips` | `id` (UUID), `user_id`, kolom statistik sama dengan §24, `source`, `version`, `deleted_at`, `updated_at` |
+| `location_points` | `trip_id`, `latitude`, `longitude`, `accuracy`, `speed`, `bearing`, `altitude`, `recorded_at`; unik (`trip_id`, `recorded_at`) |
+| `places` | `id` (UUID), `user_id`, `name`, `latitude`, `longitude`, `radius_meters`, `created_at`, `updated_at`, `version`, `deleted_at` |
+
+Setiap query dibatasi `user_id` milik token (§36).
+
+### Acceptance Criteria Fase 7
+
+- Tanpa mengaktifkan Cloud Backup, tidak ada data lokasi yang terkirim (diverifikasi dengan inspeksi trafik).
+- Trip selesai terupload saat ada jaringan; saat offline, trip diantre lalu terupload ketika koneksi kembali.
+- Tracking tidak tersendat selama sync berjalan.
+- Perangkat baru yang login dan memilih Pulihkan mendapatkan trip, rute, statistik, visit, dan tempat yang sama.
+- Upload ulang trip yang sama (misalnya akibat retry) tidak menghasilkan trip atau titik ganda (boundary).
+- Trip yang dihapus di perangkat A hilang dari perangkat B setelah sync.
+- Edit tempat di dua perangkat: hasil akhir = edit dengan `updated_at` terbaru.
+- Server tidak tersedia (5xx/timeout): data tetap di antrean, error tampil di status sync, tracking normal (failure case).
+- Mematikan Cloud Backup dengan "Hapus data di server" menghapus seluruh data pengguna di server.
+- Migrasi 4 → 5 dites.
+
+### Tidak termasuk Fase 7
+
+End-to-end encryption, sync Settings, berbagi trip ke pengguna lain, ekspor GPX/CSV.
 
 ---
 
 ## Fase 8 — Group
 
-Scope:
+### Tujuan
 
-- membuat grup;
-- mengundang anggota melalui kode atau tautan undangan;
-- menerima undangan, keluar dari grup, dan mengeluarkan anggota (khusus owner);
-- bergabung dengan grup **tidak** otomatis membagikan lokasi.
+Membuat grup dan mengelola keanggotaan sebagai dasar Live Sharing. Fase ini tidak mengirim data lokasi sama sekali.
+
+### Keputusan
+
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Syarat | Login dan email terverifikasi | Identitas anggota jelas |
+| Batas anggota | Maksimal 20 anggota per grup; maksimal 10 grup per pengguna | Grup untuk keluarga/teman dekat, beban server dan baterai terkendali |
+| Undangan | Kode 8 karakter (huruf besar + angka tanpa `0`, `O`, `1`, `I`), berlaku 7 hari, dapat dipakai berkali-kali sampai kedaluwarsa atau dicabut. Tautan `https://<domain>/join/<kode>` membuka aplikasi via Android App Links; bila aplikasi belum terpasang, halaman web menampilkan kode | Tanpa push notification (§37) |
+| Bergabung | Pengguna memasukkan kode atau membuka tautan, melihat nama grup dan jumlah anggota, lalu menekan Gabung | Persetujuan eksplisit |
+| Lokasi | Bergabung **tidak** membagikan lokasi | Privacy-first |
+| Data offline | Daftar grup dan anggota disimpan sebagai cache read-only di Room; aksi yang butuh server dinonaktifkan saat offline | Fitur jaringan menangani offline dengan wajar (§3) |
+
+### Peran dan aksi
+
+| Aksi | Owner | Member |
+|---|---|---|
+| Lihat daftar anggota | Ya | Ya |
+| Ganti nama grup | Ya | Tidak |
+| Buat ulang / cabut kode undangan | Ya | Tidak |
+| Keluarkan anggota | Ya | Tidak |
+| Alihkan kepemilikan | Ya | Tidak |
+| Hapus grup | Ya | Tidak |
+| Keluar dari grup | Ya, setelah mengalihkan kepemilikan; bila satu-satunya anggota, keluar = hapus grup | Ya |
+
+### Fitur
+
+1. Tab navigasi **Grup** (navigasi utama menjadi Home, History, Tempat, Grup). Tanpa login, tab ini menampilkan penjelasan dan tombol login.
+2. Buat grup: nama 1–50 karakter.
+3. Detail grup: nama, daftar anggota (nama tampilan, peran, tanggal bergabung), kode undangan dan tombol bagikan (share sheet Android) untuk owner.
+4. Gabung via kode atau tautan.
+5. Konfirmasi untuk keluar, mengeluarkan anggota, dan hapus grup.
+
+### Skema
+
+Server:
+
+| Tabel | Field utama |
+|---|---|
+| `groups` | `id` (UUID), `name`, `owner_id`, `created_at`, `updated_at` |
+| `group_members` | `group_id`, `user_id`, `role` (`owner`/`member`), `joined_at`; unik (`group_id`, `user_id`) |
+| `group_invites` | `group_id`, `code` (unik), `expires_at`, `revoked_at` |
+
+Lokal (cache, migrasi Room 5 → 6): `groups` (`id`, `name`, `role`, `fetched_at`) dan `group_members` (`group_id`, `user_id`, `name`, `role`, `joined_at`). Cache dihapus saat logout.
+
+### Acceptance Criteria Fase 8
+
+- Pengguna dapat membuat grup, membagikan kode, dan pengguna lain dapat bergabung dengan kode atau tautan.
+- Kode yang kedaluwarsa atau dicabut ditolak dengan pesan jelas (failure case).
+- Anggota ke-21 ditolak; anggota ke-20 diterima (boundary).
+- Hanya owner yang dapat mengeluarkan anggota, mengganti nama, dan menghapus grup (diuji juga di API, bukan hanya UI).
+- Pengguna yang bukan anggota tidak dapat membaca data grup lewat API.
+- Bergabung ke grup tidak mengirim data lokasi apa pun.
+- Saat offline, daftar grup tetap tampil dari cache dan aksi server nonaktif.
+- Migrasi 5 → 6 dites.
+
+### Tidak termasuk Fase 8
+
+Chat, feed, push notification, peran selain owner/member, grup publik.
 
 ---
 
 ## Fase 9 — Live Sharing
 
-Lokasi terkini pengguna dikirim ke backend lalu diteruskan ke anggota grup.
+### Tujuan
 
-Arsitektur:
+Anggota grup dapat melihat lokasi terkini anggota lain yang sedang berbagi (tujuan §2 poin 15), dengan kendali penuh di tangan pengirim.
 
-```text
-GPS
- ↓
-Room
- ↓
-Sync
- ↓
-Laravel
- ↓
-Realtime
- ↓
-Device lain
-```
+### Keputusan
 
-Scope:
+| Keputusan | Nilai | Alasan |
+|---|---|---|
+| Aktivasi | Per grup, eksplisit, default nonaktif | Privacy-first |
+| Durasi | Pilihan 15 menit, 1 jam (default), 8 jam, atau "Sampai saya matikan" | Mencegah berbagi lokasi tanpa sadar terlalu lama |
+| Data yang dikirim | Hanya `latitude`, `longitude`, `accuracy`, `recorded_at`. Tanpa speed, bearing, altitude, atau riwayat trip | Data minimum yang dibutuhkan |
+| Penyimpanan di server | Hanya satu lokasi terakhir per pengguna (ditimpa setiap update), dihapus saat sharing berhenti atau kedaluwarsa. Tidak ada riwayat | Privacy-first |
+| Penyimpanan lokal | Tabel `live_location_outbox` di Room berisi paling banyak satu baris (lokasi terbaru yang belum terkirim) | Sesuai arsitektur GPS → Room → Sync; saat offline hanya lokasi terbaru yang dikirim |
+| Service | Satu foreground service tipe `location` yang sama dengan tracking. Jika tracking aktif, sharing memakai fix tracking; jika tidak, service berjalan dalam mode sharing saja | Satu notification, satu sumber GPS |
+| Permission | Dimulai dari aksi pengguna di foreground, sehingga tidak butuh background location | Konsisten dengan §9 |
+| Pengiriman | REST `POST /live/location`; server meneruskan ke anggota lewat Reverb private channel `group.{id}` | Upload sekali untuk semua grup aktif |
+| Penerimaan | WebSocket hanya terhubung selama layar peta grup terlihat; saat dibuka, snapshot diambil via REST lalu subscribe | Battery-aware |
 
-- pengguna mengaktifkan Live Sharing per grup, dengan batas waktu opsional;
-- anggota grup melihat posisi terkini dan waktu update terakhir dari anggota yang sedang berbagi;
-- yang dibagikan hanya lokasi terkini, bukan riwayat trip;
-- indikator yang jelas (foreground notification) selama Live Sharing aktif;
-- frekuensi pengiriman memperhatikan baterai, dengan nilai default yang ditetapkan di tiket;
-- saat offline, hanya lokasi terbaru yang dikirim ketika koneksi kembali; lokasi lama tidak dikirim ulang.
+### Nilai default (`LiveSharingConfig`)
+
+| Parameter | Default |
+|---|---|
+| Interval GPS mode sharing saja | 30 detik, prioritas `BALANCED_POWER_ACCURACY` |
+| Kirim saat bergerak | Paling cepat setiap 30 detik |
+| Kirim saat diam (perpindahan < 50 m dari lokasi terakhir terkirim) | Setiap 5 menit (heartbeat) |
+| Batas update di server | Update lebih cepat dari 10 detik diabaikan |
+| Lokasi dianggap lama | > 15 menit, ditampilkan pudar dengan "terakhir terlihat …" |
+
+### Fitur
+
+1. Detail grup: toggle **Bagikan lokasi saya** dengan pilihan durasi. Dialog menjelaskan bahwa lokasi terkini dikirim ke anggota grup ini selama durasi tersebut.
+2. Foreground notification selama sharing aktif: "Berbagi lokasi dengan <nama grup> sampai <jam>", tombol **Berhenti berbagi**. Bila tracking juga aktif, informasi digabung dalam satu notification.
+3. **Peta grup:** marker setiap anggota yang sedang berbagi (nama, waktu update terakhir, lingkaran accuracy). Anggota yang tidak berbagi tidak tampil di peta, tetapi tampil di daftar dengan status "Tidak berbagi".
+4. Indikator di daftar grup untuk grup yang sedang menerima lokasi saya.
+
+### Kondisi sharing berhenti
+
+Sharing berhenti dan lokasi di server dihapus bila:
+
+- pengguna mematikan toggle atau menekan Berhenti berbagi;
+- durasi habis (ditegakkan oleh server melalui `expires_at` dan oleh perangkat);
+- pengguna keluar atau dikeluarkan dari grup, atau grup dihapus;
+- pengguna logout atau menghapus akun;
+- permission lokasi dicabut.
+
+Sharing **tidak** berlanjut setelah proses aplikasi dihentikan sistem (`START_NOT_STICKY`, sama dengan §32). Status di server kedaluwarsa sendiri dan anggota melihat lokasi tersebut sebagai lama.
+
+### Skema
+
+Server:
+
+| Tabel | Field utama |
+|---|---|
+| `live_shares` | `user_id`, `group_id`, `started_at`, `expires_at` (nullable untuk "sampai dimatikan"); unik (`user_id`, `group_id`) |
+| `live_locations` | `user_id` (PK), `latitude`, `longitude`, `accuracy`, `recorded_at`, `received_at` |
+
+Otorisasi channel `group.{id}`: hanya anggota grup. Endpoint snapshot hanya mengembalikan lokasi anggota yang memiliki `live_shares` aktif untuk grup tersebut.
+
+Lokal (migrasi Room 6 → 7): `live_location_outbox` (`id` = 1 tetap, `latitude`, `longitude`, `accuracy`, `recorded_at`).
+
+### Acceptance Criteria Fase 9
+
+- Tanpa mengaktifkan sharing, tidak ada lokasi yang terkirim meski sudah bergabung grup.
+- Anggota lain melihat posisi pengirim diperbarui sekitar setiap 30 detik saat bergerak.
+- Sharing 15 menit berhenti otomatis pada menit ke-15; lokasi hilang dari peta anggota (boundary).
+- Saat offline, lokasi tidak menumpuk; setelah koneksi kembali hanya lokasi terbaru yang terkirim (failure case).
+- Anggota yang dikeluarkan langsung kehilangan akses ke lokasi anggota grup dan berhenti membagikan lokasinya.
+- Non-anggota tidak dapat subscribe channel maupun membaca snapshot (diuji di API).
+- Notification sharing selalu tampil selama sharing aktif.
+- Tracking dan sharing berjalan bersamaan dengan satu notification dan satu sumber GPS.
+- Server tidak menyimpan riwayat lokasi (hanya satu baris per pengguna).
+- Migrasi 6 → 7 dites.
+
+### Tidak termasuk Fase 9
+
+Riwayat lokasi anggota, berbagi trip, status baterai perangkat lain, geofence alert, SOS (§37), berbagi ke orang di luar grup.
 
 ---
 
@@ -1323,7 +1794,7 @@ Trip Detail
 
 # 40. Acceptance Criteria Fase 1
 
-Fase 1 dianggap selesai apabila seluruh kondisi berikut terpenuhi. Acceptance criteria Fase 2–9 ditulis di §38 saat detail fase dilengkapi.
+Fase 1 dianggap selesai apabila seluruh kondisi berikut terpenuhi. Acceptance criteria Fase 2–9 ada di §38, di bagian masing-masing fase.
 
 ### Tracking
 
@@ -1570,10 +2041,10 @@ ID trip:
 UUID v4 dibuat di perangkat
 
 Permission lokasi:
-Foreground + presisi, tanpa background location (ditinjau di Fase 5)
+Foreground + presisi; background location hanya untuk trip otomatis opt-in (Fase 5)
 
 Backend:
-Laravel + REST API + realtime (Fase 6+)
+Laravel + PostgreSQL + REST API + Reverb realtime (Fase 6+)
 
 Account:
 Opsional (Fase 6+)
@@ -1590,11 +2061,27 @@ Local-first
 Privacy-first
 ```
 
-PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, detail requirement fase tersebut di §38 harus dilengkapi dan direview. Perubahan requirement harus dicatat di §45 dan dinilai dampaknya terhadap kestabilan tracking, penggunaan baterai, privasi, dan kompleksitas aplikasi.
+PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, detail requirement fase tersebut di §38 harus direview. Perubahan requirement harus dicatat di §45 dan dinilai dampaknya terhadap kestabilan tracking, penggunaan baterai, privasi, dan kompleksitas aplikasi.
 
 ---
 
 # 45. Riwayat Revisi
+
+## v2.2 — 2026-10-03
+
+Detail Fase 2–9 dilengkapi. Tujuan dan prinsip (§1–§3) tidak berubah.
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §38 Fase 2 | Algoritma visit (radius 100 m, min. 5 menit), dihitung saat trip selesai; tabel `visits` sebagai data turunan yang tidak disinkronkan | Battery-aware; location point tetap sumber kebenaran |
+| §38 Fase 3 | Tabel `places` (UUID); nama visit dicocokkan saat ditampilkan; tab Tempat dan detail tempat | Perubahan tempat langsung berlaku ke visit lama; sync-ready |
+| §38 Fase 4 | Offline region via MapLibre (zoom 10–14, maks. 20 000 tile, default Wi-Fi saja); daftar key DataStore; setting tracking berlaku di trip berikutnya | Hemat kuota; trip memakai parameter konsisten |
+| §38 Fase 5 | Trip otomatis opt-in (kendaraan/sepeda), kolom `trips.source`, lanjutkan trip ≤ 60 menit, jarak dengan titik jangkar, interval turun saat diam | Revisi keputusan §9 hanya untuk trip otomatis |
+| §38 Fase 6 | Backend: Laravel + PostgreSQL + Redis + Reverb, Sanctum, email + password, verifikasi email; logout tidak menghapus data lokal | Local-first, privacy-first |
+| §38 Fase 7 | Cloud Backup per akun; sync trip selesai, titik, dan tempat via WorkManager; hapus menang, tempat last-write-wins; tombstone `deleted_at` | Sync idempoten tanpa duplikasi |
+| §38 Fase 8 | Undangan kode 8 karakter berlaku 7 hari + App Links; maks. 20 anggota; cache grup read-only | Tanpa push notification; offline wajar |
+| §38 Fase 9 | Sharing per grup dengan durasi; hanya lat/lng/accuracy/waktu; server menyimpan satu lokasi terakhir; satu foreground service bersama tracking | Data minimum, battery-aware |
+| §4, §9, §26, §27, §35, §40, §44 | Diselaraskan dengan §38 | Konsistensi |
 
 ## v2.1 — 2026-10-03
 

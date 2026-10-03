@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">Map Track</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_history">History</string>
+
+    <string name="home_title">My Location</string>
+    <string name="label_speed">Kecepatan</string>
+    <string name="label_accuracy">Akurasi</string>
+    <string name="label_gps">GPS</string>
+    <string name="label_position">Posisi</string>
+
+    <string name="gps_no_permission">Izin lokasi belum diberikan</string>
+    <string name="gps_disabled">Location service tidak aktif</string>
+    <string name="gps_searching">Mencari sinyal GPS…</string>
+    <string name="gps_active">Aktif</string>
+
+    <string name="permission_rationale">Aplikasi membutuhkan akses lokasi untuk merekam perjalanan dan kecepatan Anda.\n\nData lokasi hanya disimpan di perangkat.</string>
+    <string name="permission_allow">Izinkan lokasi</string>
+    <string name="permission_denied">Tracking tidak dapat dimulai karena izin lokasi belum diberikan.</string>
+    <string name="permission_approximate">Izin lokasi akurat diperlukan untuk merekam kecepatan dan rute. Pilih \"Lokasi akurat\" saat diminta, atau ubah di pengaturan aplikasi.</string>
+    <string name="permission_retry">Coba lagi</string>
+    <string name="open_app_settings">Buka Pengaturan</string>
+    <string name="location_disabled">Location service tidak aktif.\n\nAktifkan Location agar tracking dapat dimulai.</string>
+    <string name="open_location_settings">Aktifkan Location</string>
+
+    <string name="tracking_channel_name">Tracking perjalanan</string>
+    <string name="tracking_notification_title">Tracking aktif</string>
+    <string name="tracking_stop">Stop</string>
+
+    <string name="label_tracking">Tracking</string>
+    <string name="label_duration">Durasi</string>
+    <string name="tracking_active">● Aktif</string>
+    <string name="tracking_inactive">Tidak aktif</string>
+    <string name="tracking_start">Start Tracking</string>
+    <string name="tracking_stop_button">Stop Tracking</string>
+    <string name="error_trip_already_active">Masih ada perjalanan yang belum diakhiri. Akhiri perjalanan itu terlebih dahulu.</string>
+    <string name="error_service_start_failed">Tracking gagal dimulai. Coba lagi.</string>
+    <string name="dismiss">OK</string>
+
+    <string name="history_empty">Belum ada perjalanan.</string>
+    <string name="history_active">Sedang berjalan</string>
+    <string name="delete_trip_title">Hapus perjalanan ini?</string>
+    <string name="delete_trip_message">Data perjalanan dan lokasi akan dihapus secara permanen dari perangkat.</string>
+    <string name="delete">Hapus</string>
+    <string name="cancel">Batal</string>
+
+    <string name="trip_detail_title">Detail Perjalanan</string>
+    <string name="back">Kembali</string>
+    <string name="trip_not_found">Perjalanan tidak ditemukan.</string>
+    <string name="label_start">Mulai</string>
+    <string name="label_end">Selesai</string>
+    <string name="label_distance">Jarak</string>
+    <string name="label_avg_speed">Kecepatan rata-rata</string>
+    <string name="label_max_speed">Kecepatan maksimum</string>
+    <string name="label_point_count">Jumlah titik</string>
+    <string name="speed_history_title">Histori kecepatan</string>
+    <string name="speed_history_empty">Belum ada data kecepatan.</string>
+
+    <string name="map_follow">Ikuti posisi</string>
+
+    <string name="route_not_enough_data">Data lokasi tidak cukup untuk menggambar rute.</string>
+
+    <string name="interrupted_title">Perjalanan sebelumnya tidak selesai dengan normal.</string>
+    <string name="label_last_data">Data terakhir</string>
+    <string name="end_trip">Akhiri Trip</string>
+    <string name="tracking_interrupted">Terputus</string>
+</resources>

@@ -24,3 +24,5 @@ captures/
 *.aab
 *.keystore
 *.jks
+
+/graphify-out

@@ -28,20 +28,9 @@ Each backlog item follows this format:
 <!-- ADD BACKLOG ITEMS BELOW -->
 
 
-## Fase 3 — Saved Places
-
-**Status:** `OPEN`
-
-**Summary:** Pengguna membuat, mengubah, dan menghapus tempat bernama (tabel `places` dengan UUID + `updated_at`, migrasi 2 → 3, `PlaceConfig`). Nama visit dicocokkan saat ditampilkan (pusat visit dalam radius; konflik → pusat terdekat), bukan disimpan. Tab navigasi baru **Tempat** dengan daftar, form buat/ubah (pin di tengah peta + slider radius), detail tempat, dan aksi "Simpan sebagai tempat" dari visit. Detail: PRD §38 Fase 3.
-
-**Open questions (resolve during planning):**
-1. Pencocokan visit ↔ tempat dilakukan di query SQL atau di Kotlin (use case)? Pertimbangkan performa Detail Tempat untuk banyak trip.
-2. Komponen peta untuk pemilih titik + lingkaran radius: reuse komponen MapLibre Home/Trip Detail atau komponen baru?
-3. Jumlah kunjungan & kunjungan terakhir di daftar tempat dihitung on-the-fly atau di-cache?
-
 ## Fase 4 — Offline Map & Settings
 
-**Status:** `BLOCKED` *(menunggu Fase 3 selesai)*
+**Status:** `OPEN`
 
 **Summary:** Unduh wilayah peta via MapLibre `OfflineManager` (zoom 10–14, maks. 20 000 tile, default Wi-Fi saja) dengan halaman Offline Maps. Halaman Settings berbasis DataStore Preferences: interval tracking, ambang accuracy, satuan metrik/imperial, kamera mengikuti posisi, unduh hanya Wi-Fi, plus bagian Tentang. Setting tracking dibaca saat Start dan berlaku mulai trip berikutnya. Detail: PRD §38 Fase 4.
 

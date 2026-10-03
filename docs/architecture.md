@@ -2,16 +2,16 @@
 
 ## Summary
 
-Map Track adalah aplikasi Android single-module (`:app`) berbasis Jetpack Compose. Aplikasi berisi Application class dengan dependency container manual, satu Activity, navigasi dua tab (Home, History) plus Trip Detail, foreground service tracking, layer data Room untuk trip, location point, dan visit, serta logika domain murni untuk filter GPS, statistik trip, dan deteksi visit. Struktur paket mengikuti [PRD §42](initiate-file/prd-map-track.md#42-struktur-implementasi-awal).
+Map Track adalah aplikasi Android single-module (`:app`) berbasis Jetpack Compose. Aplikasi berisi Application class dengan dependency container manual, satu Activity, navigasi tiga tab (Home, History, Tempat) plus Trip Detail, Detail Tempat, dan form tempat, foreground service tracking, layer data Room untuk trip, location point, visit, dan tempat, serta logika domain murni untuk filter GPS, statistik trip, deteksi visit, dan pencocokan visit ↔ tempat. Struktur paket mengikuti [PRD §42](initiate-file/prd-map-track.md#42-struktur-implementasi-awal).
 
 ## Components
 
 | Component | Responsibility | Code location | Dependencies |
 |---|---|---|---|
 | `MapTrackApplication` | Membuat `AppContainer` saat proses dimulai, lalu meluncurkan backfill visit | `app/src/main/java/com/radityodwiki/maptrack/MapTrackApplication.kt` | `AppContainer` |
-| `AppContainer` | Wiring dependency manual: `database`, `tripRepository`, `locationTracker`, `tripRecorder`, `trackingStateHolder`, `trackingController`, `visitBackfill` (lazy); `applicationScope` (`SupervisorJob() + Dispatchers.Default`) dan `startVisitBackfill()` | `app/src/main/java/com/radityodwiki/maptrack/AppContainer.kt` | `MapTrackDatabase`, `TripRepository`, `VisitBackfill` |
+| `AppContainer` | Wiring dependency manual: `database`, `tripRepository`, `locationTracker`, `tripRecorder`, `trackingStateHolder`, `trackingController`, `visitBackfill`, `placeRepository` (lazy); `applicationScope` (`SupervisorJob() + Dispatchers.Default`) dan `startVisitBackfill()` | `app/src/main/java/com/radityodwiki/maptrack/AppContainer.kt` | `MapTrackDatabase`, `TripRepository`, `VisitBackfill` |
 | `MainActivity` | Entry point UI, memasang theme dan NavHost | `app/src/main/java/com/radityodwiki/maptrack/MainActivity.kt` | `MapTrackNavHost`, `MapTrackTheme` |
-| `MapTrackNavHost` | Scaffold + bottom navigation, route `home`, `history`, dan `trip/{tripId}` | `app/src/main/java/com/radityodwiki/maptrack/navigation/MapTrackNavHost.kt` | `HomeScreen`, `HistoryScreen` |
+| `MapTrackNavHost` | Scaffold + bottom navigation, route `home`, `history`, `places`, `trip/{tripId}`, `place/{placeId}`, `place-editor?placeId=&lat=&lng=` | `app/src/main/java/com/radityodwiki/maptrack/navigation/MapTrackNavHost.kt` | `HomeScreen`, `HistoryScreen` |
 | `HomeScreen` | Layar Home: alur izin lokasi, status GPS, kecepatan, akurasi, posisi | `app/src/main/java/com/radityodwiki/maptrack/ui/home/HomeScreen.kt` | `HomeViewModel`, `HomeMap` |
 | `HomeMap` | Peta Home: titik posisi dan kamera mengikuti | `app/src/main/java/com/radityodwiki/maptrack/ui/home/HomeMap.kt` | `MapLibreMap`, `cameraActionFor` |
 | `MapLibreMap` | `MapView` MapLibre di Compose dengan penerusan lifecycle; memuat `MapConfig.STYLE_URL` | `app/src/main/java/com/radityodwiki/maptrack/ui/map/MapLibreMap.kt` | MapLibre Android SDK |
@@ -25,17 +25,23 @@ Map Track adalah aplikasi Android single-module (`:app`) berbasis Jetpack Compos
 | `LocationTracker` (`LocationSource`) | Fused Location Provider: `fixes()` sebagai Flow, cek izin dan status Location service | `app/src/main/java/com/radityodwiki/maptrack/location/LocationTracker.kt` | Play Services Location |
 | `HistoryScreen` | Daftar trip dan dialog konfirmasi hapus | `app/src/main/java/com/radityodwiki/maptrack/ui/history/HistoryScreen.kt` | `HistoryViewModel` |
 | `TripDetailScreen`, `SpeedChart`, `TripRouteMap` | Ringkasan trip, daftar tempat singgah, peta rute (polyline + marker start/finish/visit), dan grafik kecepatan Canvas | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/` | `TripDetailViewModel` |
-| `TripDetailViewModel` | `observeTrip` + `observePoints` + `observeVisits` → `TripDetailUiState` (ringkasan, sampel kecepatan, titik rute, visit); `tripId` dari `SavedStateHandle` | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/TripDetailViewModel.kt` | `TripRepository` |
+| `TripDetailViewModel` | `observeTrip` + `observePoints` + `observeVisits` + `observePlaces` → `TripDetailUiState` (ringkasan, sampel kecepatan, titik rute, visit bernama); `tripId` dari `SavedStateHandle` | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/TripDetailViewModel.kt` | `TripRepository` |
+| `PlacesScreen`, `PlacesViewModel` | Tab Tempat: daftar tempat dengan jumlah & kunjungan terakhir (`observePlaces` + `observeAllVisits` → `PlaceMatcher.group`) | `app/src/main/java/com/radityodwiki/maptrack/ui/places/` | `PlaceRepository`, `TripRepository` |
+| `PlaceEditorScreen`, `PlaceEditorViewModel`, `PlacePickerMap` | Form buat/ubah tempat: pin tengah peta, lingkaran radius, slider, lokasi saat ini | `app/src/main/java/com/radityodwiki/maptrack/ui/places/` | `PlaceRepository`, `LocationSource` |
+| `PlaceDetailScreen`, `PlaceDetailViewModel` | Detail tempat: peta statis, total kunjungan & durasi, daftar kunjungan, hapus | `app/src/main/java/com/radityodwiki/maptrack/ui/places/` | `PlaceRepository`, `TripRepository` |
+| `circleRing`, `placeZoom` | Poligon lingkaran radius dan zoom kamera tempat (murni) | `app/src/main/java/com/radityodwiki/maptrack/ui/map/PlaceGeometry.kt` | `GeoDistance` |
 | `HistoryViewModel` | `observeTrips()` → `List<HistoryItem>`; hapus trip | `app/src/main/java/com/radityodwiki/maptrack/ui/history/HistoryViewModel.kt` | `TripRepository` |
 | `MapTrackTheme` | Material 3 theme, dynamic color di Android 12+ | `app/src/main/java/com/radityodwiki/maptrack/ui/theme/Theme.kt` | — |
-| `MapTrackDatabase` | Room database `map_track.db` versi 2 (`AutoMigration` 1 → 2), menyediakan `TripDao`, `LocationPointDao`, dan `VisitDao` | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` | Room |
-| `TripDao`, `LocationPointDao`, `VisitDao` | Query trip, location point, dan visit (Flow untuk observasi) | `app/src/main/java/com/radityodwiki/maptrack/data/local/dao/` | Room |
+| `MapTrackDatabase` | Room database `map_track.db` versi 3 (`AutoMigration` 1 → 2, 2 → 3), menyediakan `TripDao`, `LocationPointDao`, `VisitDao`, dan `PlaceDao` | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` | Room |
+| `TripDao`, `LocationPointDao`, `VisitDao`, `PlaceDao` | Query trip, location point, visit, dan tempat (Flow untuk observasi) | `app/src/main/java/com/radityodwiki/maptrack/data/local/dao/` | Room |
 | `TripRepository` | API data trip untuk layer atas; menegakkan satu trip aktif, larangan hapus trip aktif, abaikan titik ganda; `finishTrip` menghitung statistik dan visit dalam satu transaksi; `recomputeVisits` untuk backfill (implementasi `VisitRecomputation`) | `app/src/main/java/com/radityodwiki/maptrack/data/repository/TripRepository.kt` | `MapTrackDatabase`, `TripStatisticsCalculator`, `VisitDetector` |
-| Domain model `Trip`, `TripStatus`, `LocationPoint`, `Visit`, `GpsFix`, `LocationPermission` | Model yang dipakai di luar layer data | `app/src/main/java/com/radityodwiki/maptrack/domain/model/` | — |
+| `PlaceRepository` | CRUD tempat dengan validasi (`InvalidPlaceException`); hapus hanya baris `places` | `app/src/main/java/com/radityodwiki/maptrack/data/repository/PlaceRepository.kt` | `MapTrackDatabase`, `PlaceValidator` |
+| Domain model `Trip`, `TripStatus`, `LocationPoint`, `Visit`, `Place`, `PlaceInput`, `GpsFix`, `LocationPermission` | Model yang dipakai di luar layer data | `app/src/main/java/com/radityodwiki/maptrack/domain/model/` | — |
 | `LocationFilter` | Menentukan apakah fix GPS disimpan (PRD §12); mengembalikan `RejectReason` atau `null` | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/LocationFilter.kt` | `GeoDistance`, `TrackingConfig` |
 | `TripStatisticsCalculator` | Menghitung jarak, durasi, rata-rata, dan kecepatan maksimum (PRD §16) | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/TripStatisticsCalculator.kt` | `GeoDistance` |
 | `VisitDetector`, `PlaceDetectionConfig` | Deteksi visit dari titik satu trip dan parameternya (PRD §38 Fase 2) | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/` | `GeoDistance` |
 | `VisitBackfill` (`VisitRecomputation`) | Menghitung ulang visit trip `completed` dengan versi deteksi lama; gagal per trip tidak menghentikan yang lain | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/VisitBackfill.kt` | `TripRepository` |
+| `PlaceMatcher`, `PlaceValidator`, `PlaceConfig` | Pencocokan visit ↔ tempat (radius inklusif, pusat terdekat), validasi field tempat, dan batasnya (PRD §38 Fase 3) | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/` | `GeoDistance` |
 | `GeoDistance` | Jarak haversine antar-koordinat | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/GeoDistance.kt` | — |
 | Formatters | Format kecepatan (termasuk aturan diam/basi), jarak, durasi, akurasi, tanggal, dan jam (locale `id-ID`) untuk UI | `app/src/main/java/com/radityodwiki/maptrack/ui/format/Formatters.kt` | `TrackingConfig` |
 | `TrackingConfig` | Konstanta tracking dan filtering (interval, ambang accuracy, batas GPS jump, stale fix) | `app/src/main/java/com/radityodwiki/maptrack/location/TrackingConfig.kt` | — |
@@ -55,6 +61,8 @@ Stop tracking: tombol Stop di Home atau notification → `ACTION_STOP` → servi
 Backfill visit: `AppContainer.startVisitBackfill()` → `VisitBackfill.run()` → `TripRepository.tripIdsNeedingVisits()` → per trip `recomputeVisits()` (transaksi: hapus visit → `VisitDetector.detect` → insert → `setVisitDetectionVersion`).
 
 Trip Detail: `TripDetailViewModel` → `TripDetailScreen` (ringkasan → daftar "Tempat singgah" → `TripRouteMap` → `SpeedChart`); tap item visit → `VisitFocusRequest` → `animateCamera` + `bringIntoView`.
+
+Tempat: Tab Tempat → `PlaceDetailScreen` (tap kunjungan → Trip Detail) atau `PlaceEditorScreen` (+ / ikon Ubah / "Simpan sebagai tempat" dari Trip Detail) → `PlaceRepository` → Room. Semua layar yang menampilkan nama visit menggabungkan `observePlaces()` dengan visit lalu memanggil `PlaceMatcher`, sehingga perubahan tempat langsung terlihat.
 
 ## External integrations
 

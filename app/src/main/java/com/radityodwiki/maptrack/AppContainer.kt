@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
+import com.radityodwiki.maptrack.data.repository.PlaceRepository
 import com.radityodwiki.maptrack.data.repository.TripRepository
 import com.radityodwiki.maptrack.domain.usecase.TripRecorder
 import com.radityodwiki.maptrack.domain.usecase.VisitBackfill
@@ -30,6 +31,8 @@ class AppContainer(context: Context) {
     val database: MapTrackDatabase by lazy { MapTrackDatabase.create(appContext) }
 
     val tripRepository: TripRepository by lazy { TripRepository(database) }
+
+    val placeRepository: PlaceRepository by lazy { PlaceRepository(database) }
 
     val locationTracker: LocationTracker by lazy { LocationTracker(appContext) }
 

@@ -60,3 +60,24 @@ Entry format (4 fields):
 **Impact:** Migrasi berikutnya (2 → 3, dst.) dites dengan pola yang sama: `createDatabase(N)` dari `N.json` lalu buka dengan Room. Constraint tabel baru dites terpisah dengan database in-memory (contoh: `VisitDaoTest`). `1.json` dan seterusnya wajib tetap ada di git.
 
 **Tickets:** TICKET-013
+
+## DEC-005 — Titik tempat hanya diambil dari gesture peta
+
+**Decision:** `PlacePickerMap` melaporkan target kamera sebagai titik tempat hanya bila gerakan kamera dimulai gesture pengguna (`REASON_API_GESTURE`). Titik dari kode (tempat lama, pusat visit, lokasi saat ini) diset di `PlaceEditorViewModel` lalu dikirim ke peta sebagai `CameraRequest`.
+
+**Why:** Peta memulai di kamera default (Indonesia, zoom 3.5) dan dapat memicu event idle setelah style termuat. Bila setiap idle dianggap pilihan pengguna, titik dari visit/tempat lama bisa tertimpa titik default, atau tempat baru tersimpan di tengah Indonesia tanpa disadari.
+
+**Impact:** Tempat baru tanpa gesture dan tanpa lokasi saat ini tidak bisa disimpan (Simpan nonaktif). Kode yang menambah cara lain menggerakkan kamera form harus lewat `CameraRequest`, bukan memanggil `onCenterPicked`.
+
+**Tickets:** TICKET-019
+
+## DEC-006 — Satu visit hanya dihitung untuk satu tempat
+
+**Decision:** Di semua layar (Trip Detail, Tab Tempat, Detail Tempat) visit dimiliki tepat satu tempat: tempat yang cocok dengan pusat terdekat (`PlaceMatcher.group`). Pencocokan berjalan di Kotlin, bukan SQL.
+
+**Why:** PRD hanya menetapkan aturan "pusat terdekat" untuk nama visit. Bila Detail Tempat menghitung semua visit di dalam radius, tempat besar yang tumpang tindih (mis. "Kampus" mencakup "Kantin") akan menampilkan kunjungan yang di Trip Detail bernama tempat lain. Haversine tidak tersedia di SQLite tanpa fungsi kustom, dan jumlah visit kecil.
+
+**Impact:** Total kunjungan dan durasi tempat besar berkurang ketika tempat kecil di dalamnya dibuat. Pencocokan dihitung ulang (semua visit × semua tempat) setiap kali tempat atau visit berubah; bila data tumbuh besar, pertimbangkan cache, tetapi aturan kepemilikan harus tetap sama.
+
+**Tickets:** TICKET-017, TICKET-018, TICKET-020
+

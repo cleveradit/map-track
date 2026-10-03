@@ -27,7 +27,9 @@ Halaman detail dibuka dari item History lewat route `trip/{tripId}`. Isinya ring
 |---|---|
 | Sumber | `TripRepository.observeVisits(tripId)` (lihat [place-detection.md](place-detection.md)); kosong bila trip aktif |
 | `timeRange` | `"HH:mm - HH:mm"` dari `arrivedAt`/`departedAt`, zona perangkat |
-| Label | `Tempat singgah · <formatDuration(durationMs)>` (string `visit_label`) |
+| `placeName` | `PlaceMatcher.match(pusat visit, observePlaces())?.name` (lihat [places.md](places.md)); berubah langsung saat tempat diubah/dihapus |
+| Label | `<placeName atau "Tempat singgah"> · <formatDuration(durationMs)>` (string `visit_label`) |
+| Simpan sebagai tempat | `TextButton` hanya pada visit tanpa nama → `Routes.newPlaceAt(pusat visit)` |
 | Posisi | Di bawah ringkasan, di atas peta; seluruh bagian disembunyikan bila tidak ada visit |
 | Tap item | Peta dibawa ke viewport (`BringIntoViewRequester`) dan kamera beranimasi ke visit |
 
@@ -60,4 +62,5 @@ Halaman detail dibuka dari item History lewat route `trip/{tripId}`. Isinya ring
 
 - [history.md](history.md)
 - [place-detection.md](place-detection.md)
+- [places.md](places.md)
 - [PRD §19, §21, §38 Fase 2](../initiate-file/prd-map-track.md)

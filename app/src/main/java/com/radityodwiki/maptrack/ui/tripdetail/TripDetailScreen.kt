@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ private val VisitColor = Color(0xFF9334E6)
 @Composable
 fun TripDetailScreen(
     onBack: () -> Unit,
+    onSaveVisitAsPlace: (latitude: Double, longitude: Double) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TripDetailViewModel = viewModel(factory = TripDetailViewModel.Factory),
 ) {
@@ -77,14 +79,14 @@ fun TripDetailScreen(
             when (val current = state) {
                 TripDetailUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 TripDetailUiState.NotFound -> Text(stringResource(R.string.trip_not_found), Modifier.align(Alignment.Center))
-                is TripDetailUiState.Loaded -> TripDetailContent(current)
+                is TripDetailUiState.Loaded -> TripDetailContent(current, onSaveVisitAsPlace)
             }
         }
     }
 }
 
 @Composable
-private fun TripDetailContent(state: TripDetailUiState.Loaded) {
+private fun TripDetailContent(state: TripDetailUiState.Loaded, onSaveVisitAsPlace: (Double, Double) -> Unit) {
     val summary = state.summary
     val scope = rememberCoroutineScope()
     val mapInView = remember { BringIntoViewRequester() }
@@ -108,10 +110,14 @@ private fun TripDetailContent(state: TripDetailUiState.Loaded) {
         SummaryRow(stringResource(R.string.label_point_count), state.pointCount.toString(), null, null)
 
         if (state.visits.isNotEmpty()) {
-            VisitList(state.visits) { item ->
-                focus = VisitFocusRequest(item.center)
-                scope.launch { mapInView.bringIntoView() }
-            }
+            VisitList(
+                visits = state.visits,
+                onClick = { item ->
+                    focus = VisitFocusRequest(item.center)
+                    scope.launch { mapInView.bringIntoView() }
+                },
+                onSaveAsPlace = { item -> onSaveVisitAsPlace(item.center.latitude, item.center.longitude) },
+            )
         }
 
         TripRouteMap(
@@ -139,7 +145,7 @@ private fun TripDetailContent(state: TripDetailUiState.Loaded) {
 }
 
 @Composable
-private fun VisitList(visits: List<VisitItem>, onClick: (VisitItem) -> Unit) {
+private fun VisitList(visits: List<VisitItem>, onClick: (VisitItem) -> Unit, onSaveAsPlace: (VisitItem) -> Unit) {
     Column {
         Text(stringResource(R.string.visits_title), style = MaterialTheme.typography.titleMedium)
         visits.forEach { item ->
@@ -152,13 +158,17 @@ private fun VisitList(visits: List<VisitItem>, onClick: (VisitItem) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(Modifier.size(12.dp).background(VisitColor, CircleShape))
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(item.timeRange, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        stringResource(R.string.visit_label, item.duration),
+                        stringResource(R.string.visit_label, item.placeName ?: stringResource(R.string.visits_title), item.duration),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                // Named visits already belong to a place; overlapping places can still be added from the Tempat tab.
+                if (item.placeName == null) {
+                    TextButton(onClick = { onSaveAsPlace(item) }) { Text(stringResource(R.string.visit_save_as_place)) }
                 }
             }
         }

@@ -150,6 +150,8 @@ class TripRepository(
 
     suspend fun getActiveTrip(): Trip? = tripDao.getActive()?.toDomain()
 
+    fun observeAllVisits(): Flow<List<Visit>> = visitDao.observeAll().map { list -> list.map { it.toDomain() } }
+
     fun observeVisits(tripId: String): Flow<List<Visit>> =
         visitDao.observeForTrip(tripId).map { list -> list.map { it.toDomain() } }
 

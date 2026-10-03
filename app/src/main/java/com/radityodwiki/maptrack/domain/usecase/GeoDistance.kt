@@ -7,7 +7,7 @@ import kotlin.math.sqrt
 
 /** Great-circle distance (haversine). Within ~0.5% of the WGS84 ellipsoid distance (PRD §17). */
 object GeoDistance {
-    private const val EARTH_RADIUS_METERS = 6_371_008.8
+    const val EARTH_RADIUS_METERS = 6_371_008.8
 
     fun meters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)

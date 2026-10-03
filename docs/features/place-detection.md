@@ -44,6 +44,7 @@ Saat trip diselesaikan, location point trip itu dikelompokkan menjadi **visit**:
 - Backfill juga berjalan bila proses dimulai oleh service. Balapan dengan `finishTrip` aman: keduanya transaksi Room, dan `recomputeVisits` memeriksa versi di dalam transaksi.
 - `TripRepository.completeTrip` (hanya dipakai test Fase 1) tidak menghitung visit.
 - Visit pada trip aktif tidak dihitung dan tidak ditampilkan.
+- Nama visit (Fase 3) tidak disimpan di `visits`; dicocokkan dengan tempat saat ditampilkan. Lihat [places.md](places.md).
 
 ## Related
 

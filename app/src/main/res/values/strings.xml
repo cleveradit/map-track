@@ -1,7 +1,8 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Map Track</string>
     <string name="nav_home">Home</string>
     <string name="nav_history">History</string>
+    <string name="nav_places">Tempat</string>
 
     <string name="home_title">My Location</string>
     <string name="label_speed">Kecepatan</string>
@@ -61,10 +62,40 @@
     <string name="route_not_enough_data">Data lokasi tidak cukup untuk menggambar rute.</string>
 
     <string name="visits_title">Tempat singgah</string>
-    <string name="visit_label">Tempat singgah · %1$s</string>
+    <string name="visit_label">%1$s · %2$s</string>
+    <string name="visit_save_as_place">Simpan sebagai tempat</string>
 
     <string name="interrupted_title">Perjalanan sebelumnya tidak selesai dengan normal.</string>
     <string name="label_last_data">Data terakhir</string>
     <string name="end_trip">Akhiri Trip</string>
     <string name="tracking_interrupted">Terputus</string>
+
+    <string name="places_empty">Belum ada tempat.</string>
+    <string name="place_add">Tambah tempat</string>
+    <string name="place_radius">Radius %1$s</string>
+    <string name="place_no_visits">Belum ada kunjungan</string>
+    <!-- Indonesian has no plural forms, so %d strings need no <plurals>. -->
+    <string name="place_visit_summary" tools:ignore="PluralsCandidate">%1$d kunjungan · terakhir %2$s</string>
+    <string name="place_edit_title">Ubah tempat</string>
+    <string name="place_not_found">Tempat tidak ditemukan.</string>
+    <string name="save">Simpan</string>
+    <string name="place_name">Nama tempat</string>
+    <string name="place_name_empty">Nama tempat wajib diisi.</string>
+    <string name="place_name_too_long" tools:ignore="PluralsCandidate">Nama tempat maksimal %1$d karakter.</string>
+    <string name="place_pick_hint">Geser peta untuk menentukan titik tempat, atau pakai lokasi saat ini.</string>
+    <string name="place_use_current_location">Pakai lokasi saat ini</string>
+    <string name="place_location_rationale">Izin lokasi akurat dibutuhkan untuk memakai lokasi Anda saat ini sebagai titik tempat.
+
+Data lokasi hanya disimpan di perangkat.</string>
+    <string name="place_location_denied">Izin lokasi akurat tidak diberikan. Anda tetap dapat menentukan titik dengan menggeser peta.</string>
+    <string name="place_location_disabled">Location service tidak aktif. Aktifkan Location untuk memakai lokasi saat ini.</string>
+    <string name="place_location_timeout">Lokasi saat ini belum didapat. Coba lagi di tempat terbuka.</string>
+    <string name="place_save_failed">Tempat gagal disimpan.</string>
+    <string name="place_detail_title">Detail Tempat</string>
+    <string name="label_radius">Radius</string>
+    <string name="label_total_visits">Total kunjungan</string>
+    <string name="label_total_duration">Total durasi</string>
+    <string name="place_visits_title">Kunjungan</string>
+    <string name="delete_place_title">Hapus tempat ini?</string>
+    <string name="delete_place_message">Trip dan kunjungan tidak ikut terhapus; kunjungan hanya kehilangan nama tempat.</string>
 </resources>

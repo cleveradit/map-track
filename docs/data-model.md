@@ -4,8 +4,8 @@
 
 | Storage | Isi | Definisi |
 |---|---|---|
-| Room database `map_track.db` (versi 2) | Trip, location point, dan visit | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
-| Skema terekspor | Snapshot skema per versi (`1.json`, `2.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
+| Room database `map_track.db` (versi 3) | Trip, location point, visit, dan tempat | `app/src/main/java/com/radityodwiki/maptrack/data/local/database/MapTrackDatabase.kt` |
+| Skema terekspor | Snapshot skema per versi (`1.json`, `2.json`, `3.json`) untuk migrasi | `app/schemas/com.radityodwiki.maptrack.data.local.database.MapTrackDatabase/` |
 
 Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dalam meter.
 
@@ -15,6 +15,7 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 |---|---|---|
 | `trips` | Satu sesi tracking beserta statistik akhirnya | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/TripEntity.kt` |
 | `location_points` | Titik GPS yang lolos filter, milik satu trip | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/LocationPointEntity.kt` |
+| `places` | Tempat bernama milik pengguna (sync-ready) | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/PlaceEntity.kt` |
 | `visits` | Tempat singgah satu trip; data turunan dari `location_points`, dapat dihitung ulang | `app/src/main/java/com/radityodwiki/maptrack/data/local/entity/VisitEntity.kt` |
 
 ## Key fields
@@ -43,11 +44,19 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | `visits` | `arrived_at`, `departed_at` | INTEGER | Wajib; `recorded_at` titik pertama dan terakhir visit; (`trip_id`, `arrived_at`) unik |
 | `visits` | `center_latitude`, `center_longitude` | REAL | Wajib, rata-rata titik visit |
 | `visits` | `point_count` | INTEGER | Wajib, ≥ 1 |
+| `places` | `id` | TEXT | Primary key, UUID v4 dibuat di perangkat (`PlaceRepository.createPlace`) |
+| `places` | `name` | TEXT | Wajib, di-trim, 1–50 karakter (code point), tidak harus unik |
+| `places` | `latitude`, `longitude` | REAL | Wajib, −90..90 / −180..180 |
+| `places` | `radius_meters` | REAL | Wajib, 50–1 000 |
+| `places` | `created_at` | INTEGER | Wajib |
+| `places` | `updated_at` | INTEGER | Wajib, diperbarui setiap `updatePlace` |
 
 ## Relations and enums
 
 - `trips` 1 → ∞ `location_points` lewat `trip_id`. Menghapus trip ikut menghapus semua titiknya (cascade).
 - `trips` 1 → ∞ `visits` lewat `trip_id` (cascade). Visit tidak pernah diubah per baris: dihitung ulang dengan menghapus semua visit trip lalu insert hasil baru dalam satu transaksi.
+- Tidak ada relasi FK antara `visits` dan `places`: nama visit dicocokkan saat ditampilkan (`PlaceMatcher`), sehingga menghapus tempat tidak menyentuh visit.
+- Aturan validasi tempat ditegakkan `PlaceRepository` (`InvalidPlaceException`), bukan skema.
 - Index unik (`trip_id`, `recorded_at`): insert titik ganda diabaikan (`OnConflictStrategy.IGNORE`, `addPoint` mengembalikan `false`).
 - Enum `TripStatus` (`domain/model/Trip.kt`): `ACTIVE` ↔ `active`, `COMPLETED` ↔ `completed`.
 - Aturan yang ditegakkan `TripRepository`, bukan skema: maksimal satu trip `active` (`ActiveTripExistsException`), trip `active` tidak dapat dihapus (`ActiveTripDeletionException`).
@@ -57,3 +66,4 @@ Konvensi: waktu dalam epoch millis UTC (`Long`), kecepatan dalam m/s, jarak dala
 | Dari → ke | Mekanisme | Perubahan | Test |
 |---|---|---|---|
 | 1 → 2 (Fase 2) | `AutoMigration(from = 1, to = 2)` | Tabel `visits`; kolom `trips.visit_detection_version INTEGER NOT NULL DEFAULT 0`. Tidak ada baris yang diubah | `MigrationTest` (lihat [DEC-004](decision-log.md)) |
+| 2 → 3 (Fase 3) | `AutoMigration(from = 2, to = 3)` | Tabel `places`. Tidak ada baris yang diubah | `MigrationTest.migrate2To3_*` |

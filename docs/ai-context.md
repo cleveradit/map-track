@@ -26,7 +26,18 @@ All AI agents MUST read and follow these rules before proposing or implementing 
 | Map | MapLibre |
 | Backend (Phase 6+) | Laravel + REST API + realtime channel; versions and hosting decided in the first Phase 6 ticket |
 
-<!-- FILL IN: exact versions (minSdk, targetSdk, AGP, Kotlin, Compose BOM) once the Android project is created. -->
+**Pinned versions** (source of truth: `gradle/libs.versions.toml`, `app/build.gradle.kts`):
+
+| Item | Version |
+|---|---|
+| JDK | 17 |
+| Gradle wrapper | 9.8.0 |
+| Android Gradle Plugin | 9.4.1 (built-in Kotlin — do NOT apply `org.jetbrains.kotlin.android`) |
+| Kotlin / Compose compiler plugin | 2.4.20 |
+| Compose BOM | 2026.09.00 |
+| compileSdk / targetSdk / minSdk | 37 / 36 / 29 |
+| applicationId / namespace | `com.radityodwiki.maptrack` |
+| Dependency injection | Manual `AppContainer` (no Hilt) |
 
 ---
 
@@ -64,13 +75,26 @@ All AI agents MUST read and follow these rules before proposing or implementing 
 
 ## 4. Local Development Environment
 
-<!-- FILL IN once the Android project is created. Include:
-- Prerequisites (Docker, Go version, Node version, etc.)
-- How to start services
-- How to rebuild
-- How to clear caches
-- Important notes (mounts, hot reload, etc.)
--->
+**Prerequisites**
+
+- JDK 17 (`jdk17-openjdk` on Arch/CachyOS).
+- Android SDK at `~/Android/Sdk` with `platform-tools`, `platforms;android-37.0`, `build-tools;36.1.0` (install via `~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager`).
+- `local.properties` (gitignored) containing `sdk.dir=/home/<user>/Android/Sdk`.
+
+**Commands** (run from the repo root)
+
+| Task | Command |
+|---|---|
+| Build debug APK | `./gradlew assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` |
+| Unit tests | `./gradlew testDebugUnitTest` |
+| Lint | `./gradlew lintDebug` → `app/build/reports/lint-results-debug.txt` (expected: 0 errors, 1 warning `OldTargetApi`) |
+| Install on connected phone | `./gradlew installDebug` (USB debugging on) |
+| Clear build cache | `./gradlew clean` |
+
+**Notes**
+
+- Device testing is done by the user on a physical phone; no emulator is set up on the dev machine.
+- The first build downloads dependencies into `~/.gradle` and takes several minutes.
 
 ---
 

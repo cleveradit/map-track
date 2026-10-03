@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.0 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.1 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -552,7 +552,7 @@ Total:
 198 meter
 ```
 
-Jarak antar-titik dihitung dengan `Location.distanceBetween` milik Android (jarak geodesik). Titik dengan GPS jump atau accuracy buruk sudah ditolak oleh filter §12, sehingga tidak ikut dihitung.
+Jarak antar-titik dihitung dengan rumus haversine (jarak lingkaran besar, radius bumi rata-rata 6 371 008,8 m). Selisihnya terhadap jarak elipsoid WGS84 di bawah 0,5%, dan rumus ini dapat dites tanpa perangkat Android. Titik dengan GPS jump atau accuracy buruk sudah ditolak oleh filter §12, sehingga tidak ikut dihitung.
 
 ---
 
@@ -686,7 +686,7 @@ Peta tidak menjadi sumber data lokasi.
 
 GPS tetap menjadi sumber utama koordinat.
 
-**Sumber tile:** aplikasi memakai tile vektor online publik yang tidak membutuhkan akun atau API key, misalnya OpenFreeMap. Pilihan final ditetapkan di tiket integrasi MapLibre.
+**Sumber tile:** aplikasi memakai OpenFreeMap (style `liberty`), tile vektor online publik yang tidak membutuhkan akun atau API key. Atribusi OpenFreeMap, OpenMapTiles, dan OpenStreetMap ditampilkan lewat tombol atribusi peta.
 
 **Catatan privasi:** saat mengunduh tile, server tile dapat mengetahui area peta yang sedang dilihat. Namun aplikasi tidak pernah mengirim koordinat GPS, titik lokasi, atau data trip ke server mana pun. Untuk wilayah yang sudah diunduh (Fase 4), peta tidak lagi memerlukan request tile.
 
@@ -1595,6 +1595,13 @@ PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, de
 ---
 
 # 45. Riwayat Revisi
+
+## v2.1 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §17 | Rumus jarak memakai haversine, bukan `Location.distanceBetween` | Logika statistik dapat dites di JVM; selisih < 0,5% (TICKET-003) |
+| §22 | Sumber tile ditetapkan: OpenFreeMap `liberty` | Tanpa akun/API key (TICKET-008) |
 
 ## v2.0 — 2026-10-03
 

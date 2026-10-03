@@ -10,3 +10,7 @@ For a full understanding, start with [architecture.md](../architecture.md) and [
 
 | Doc | Description | Key files |
 |---|---|---|
+| [home](home.md) | Status GPS, posisi, kecepatan, akurasi, dan alur izin lokasi | `app/src/main/java/com/radityodwiki/maptrack/ui/home/` |
+| [tracking](tracking.md) | Start/Stop trip, foreground service, filter dan penyimpanan titik, notification | `app/src/main/java/com/radityodwiki/maptrack/location/` |
+| [history](history.md) | Daftar trip terbaru di atas dan hapus trip dengan konfirmasi | `app/src/main/java/com/radityodwiki/maptrack/ui/history/` |
+| [trip-detail](trip-detail.md) | Ringkasan statistik trip dan grafik kecepatan | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/` |

@@ -8,7 +8,11 @@ import com.radityodwiki.maptrack.data.local.entity.toEntity
 import com.radityodwiki.maptrack.domain.model.LocationPoint
 import com.radityodwiki.maptrack.domain.model.Trip
 import com.radityodwiki.maptrack.domain.model.TripStatus
+import com.radityodwiki.maptrack.domain.model.Visit
+import com.radityodwiki.maptrack.domain.usecase.PlaceDetectionConfig
 import com.radityodwiki.maptrack.domain.usecase.TripStatisticsCalculator
+import com.radityodwiki.maptrack.domain.usecase.VisitDetector
+import com.radityodwiki.maptrack.domain.usecase.VisitRecomputation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -22,9 +26,10 @@ class ActiveTripDeletionException(val tripId: String) :
 class TripRepository(
     private val database: MapTrackDatabase,
     private val now: () -> Long = System::currentTimeMillis,
-) {
+) : VisitRecomputation {
     private val tripDao = database.tripDao()
     private val pointDao = database.locationPointDao()
+    private val visitDao = database.visitDao()
 
     /** Creates a new active trip. Fails if another trip is still active (PRD §8.1). */
     suspend fun startTrip(): Result<Trip> = database.withTransaction {
@@ -73,8 +78,8 @@ class TripRepository(
     }
 
     /**
-     * Computes statistics from the stored points and marks the trip completed, in one transaction
-     * (PRD §8.2). Calling it again on a completed trip returns it unchanged.
+     * Computes statistics and visits from the stored points and marks the trip completed, in one
+     * transaction (PRD §8.2, §38 Fase 2). Calling it again on a completed trip returns it unchanged.
      */
     suspend fun finishTrip(tripId: String, endedAt: Long): Trip = database.withTransaction {
         val trip = tripDao.getById(tripId) ?: throw NoSuchElementException("Trip $tripId not found")
@@ -92,10 +97,37 @@ class TripRepository(
             updatedAt = now(),
         )
         tripDao.update(completed)
+        replaceVisits(tripId, points)
         completed.toDomain()
     }
 
-    /** Deletes a completed trip and, via cascade, all its points (PRD §34). */
+    /**
+     * Recomputes the visits of a completed trip with an outdated detection version, in one transaction.
+     * Skips deleted, active, and up-to-date trips. Leaves updated_at unchanged.
+     */
+    override suspend fun recomputeVisits(tripId: String): Boolean = database.withTransaction {
+        val trip = tripDao.getById(tripId)
+        if (trip == null ||
+            trip.status != TripStatus.COMPLETED.dbValue ||
+            trip.visitDetectionVersion >= PlaceDetectionConfig.DETECTION_VERSION
+        ) {
+            return@withTransaction false
+        }
+        replaceVisits(tripId, pointDao.getForTrip(tripId).map { it.toDomain() })
+        true
+    }
+
+    override suspend fun tripIdsNeedingVisits(): List<String> =
+        tripDao.getCompletedIdsWithVisitVersionBelow(PlaceDetectionConfig.DETECTION_VERSION)
+
+    /** Must run inside a transaction: visits are derived data, replaced as a whole. */
+    private suspend fun replaceVisits(tripId: String, points: List<LocationPoint>) {
+        visitDao.deleteForTrip(tripId)
+        visitDao.insertAll(VisitDetector.detect(points).map { it.toEntity() })
+        tripDao.setVisitDetectionVersion(tripId, PlaceDetectionConfig.DETECTION_VERSION)
+    }
+
+    /** Deletes a completed trip and, via cascade, all its points and visits (PRD §34). */
     suspend fun deleteTrip(tripId: String): Result<Unit> = database.withTransaction {
         val trip = tripDao.getById(tripId)
         when {
@@ -117,6 +149,9 @@ class TripRepository(
     suspend fun getTrip(id: String): Trip? = tripDao.getById(id)?.toDomain()
 
     suspend fun getActiveTrip(): Trip? = tripDao.getActive()?.toDomain()
+
+    fun observeVisits(tripId: String): Flow<List<Visit>> =
+        visitDao.observeForTrip(tripId).map { list -> list.map { it.toDomain() } }
 
     fun observePoints(tripId: String): Flow<List<LocationPoint>> =
         pointDao.observeForTrip(tripId).map { list -> list.map { it.toDomain() } }

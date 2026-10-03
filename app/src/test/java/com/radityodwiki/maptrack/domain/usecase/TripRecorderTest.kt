@@ -6,6 +6,7 @@ import com.radityodwiki.maptrack.data.local.database.MapTrackDatabase
 import com.radityodwiki.maptrack.data.repository.TripRepository
 import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.model.TripStatus
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -143,5 +144,37 @@ class TripRecorderTest {
 
         assertEquals(5_000L, finished.endedAt)
         assertEquals(0.0, finished.distanceMeters!!, 0.0)
+    }
+
+    /** Stores a point every minute at the same place from [fromMs] to [toMs], bypassing the filter. */
+    private suspend fun storeStay(tripId: String, fromMs: Long, toMs: Long) {
+        for (t in fromMs..toMs step 60_000) repository.addPoint(testPoint(recordedAt = t).copy(tripId = tripId))
+    }
+
+    @Test
+    fun finishStoresVisits() = runTest {
+        // Stop in the app and Stop in the notification both end in the service calling finish().
+        val trip = repository.startTrip().getOrThrow()
+        storeStay(trip.id, 0, 10 * 60_000L)
+        clock = 11 * 60_000L
+
+        recorder.finish(trip.id)
+
+        val visits = repository.observeVisits(trip.id).first()
+        assertEquals(1, visits.size)
+        assertEquals(0L, visits[0].arrivedAt)
+        assertEquals(10 * 60_000L, visits[0].departedAt)
+        assertEquals(11, visits[0].pointCount)
+    }
+
+    @Test
+    fun finishInterruptedStoresVisits() = runTest {
+        val trip = repository.startTrip().getOrThrow()
+        storeStay(trip.id, 0, 10 * 60_000L)
+
+        recorder.finishInterrupted(trip.id)
+
+        assertEquals(1, repository.observeVisits(trip.id).first().size)
+        assertEquals(PlaceDetectionConfig.DETECTION_VERSION, database.tripDao().getById(trip.id)!!.visitDetectionVersion)
     }
 }

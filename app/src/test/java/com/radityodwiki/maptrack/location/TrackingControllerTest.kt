@@ -7,10 +7,12 @@ import com.radityodwiki.maptrack.data.repository.TripRepository
 import com.radityodwiki.maptrack.domain.model.GpsFix
 import com.radityodwiki.maptrack.domain.model.LocationPermission
 import com.radityodwiki.maptrack.domain.model.TripStatus
+import com.radityodwiki.maptrack.domain.usecase.PlaceDetectionConfig
 import com.radityodwiki.maptrack.domain.usecase.TripRecorder
 import com.radityodwiki.maptrack.domain.usecase.testPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -134,5 +136,32 @@ class TrackingControllerTest {
         val trip = repository.getTrip(tripId)!!
         assertEquals(TripStatus.COMPLETED, trip.status)
         assertEquals(1_500L, trip.endedAt)
+    }
+
+    private suspend fun storeStay(tripId: String) {
+        for (t in 0L..10 * 60_000L step 60_000) repository.addPoint(testPoint(recordedAt = t).copy(tripId = tripId))
+    }
+
+    @Test
+    fun stopWithoutServiceStoresVisits() = runTest {
+        controller.start()
+        val tripId = launcher.started.single()
+        storeStay(tripId)
+        stateHolder.state.value = TrackingState.Idle
+
+        controller.stop()
+
+        assertEquals(1, repository.observeVisits(tripId).first().size)
+    }
+
+    @Test
+    fun endInterruptedTripStoresVisits() = runTest {
+        val tripId = repository.startTrip().getOrThrow().id
+        storeStay(tripId)
+
+        controller.endInterruptedTrip(tripId)
+
+        assertEquals(1, repository.observeVisits(tripId).first().size)
+        assertEquals(PlaceDetectionConfig.DETECTION_VERSION, database.tripDao().getById(tripId)!!.visitDetectionVersion)
     }
 }

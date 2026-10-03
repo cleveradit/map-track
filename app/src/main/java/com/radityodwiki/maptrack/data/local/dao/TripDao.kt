@@ -31,6 +31,13 @@ interface TripDao {
     @Query("SELECT * FROM trips WHERE status = 'active' LIMIT 1")
     fun observeActive(): Flow<TripEntity?>
 
+    /** Does not touch updated_at: visits are derived data, not a user change. */
+    @Query("UPDATE trips SET visit_detection_version = :version WHERE id = :id")
+    suspend fun setVisitDetectionVersion(id: String, version: Int)
+
+    @Query("SELECT id FROM trips WHERE status = 'completed' AND visit_detection_version < :version ORDER BY started_at DESC")
+    suspend fun getCompletedIdsWithVisitVersionBelow(version: Int): List<String>
+
     @Query("DELETE FROM trips WHERE id = :id")
     suspend fun deleteById(id: String): Int
 }

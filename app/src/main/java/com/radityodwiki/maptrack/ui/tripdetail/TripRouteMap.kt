@@ -27,22 +27,44 @@ import org.maplibre.geojson.Point
 private const val ROUTE_SOURCE = "route"
 private const val START_SOURCE = "route-start"
 private const val FINISH_SOURCE = "route-finish"
+private const val VISITS_SOURCE = "route-visits"
+private const val VISIT_COLOR = "#9334E6"
 private const val CAMERA_PADDING_PX = 48
 
-private class RouteSources(val route: GeoJsonSource, val start: GeoJsonSource, val finish: GeoJsonSource)
+private class RouteSources(
+    val route: GeoJsonSource,
+    val start: GeoJsonSource,
+    val finish: GeoJsonSource,
+    val visits: GeoJsonSource,
+)
 
-/** Trip route as a polyline with start and finish markers (PRD §20). */
+/**
+ * Trip route as a polyline with start and finish markers (PRD §20) and visit markers (PRD §38 Fase 2).
+ * Each new [focus] animates the camera to that visit.
+ */
 @Composable
-fun TripRouteMap(route: List<RoutePoint>, showFinish: Boolean, modifier: Modifier = Modifier) {
+fun TripRouteMap(
+    route: List<RoutePoint>,
+    visits: List<RoutePoint>,
+    showFinish: Boolean,
+    focus: VisitFocusRequest?,
+    modifier: Modifier = Modifier,
+) {
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var sources by remember { mutableStateOf<RouteSources?>(null) }
     var cameraSet by remember { mutableStateOf(false) }
 
     MapLibreMap(modifier = modifier) { loadedMap, style ->
-        val created = RouteSources(GeoJsonSource(ROUTE_SOURCE), GeoJsonSource(START_SOURCE), GeoJsonSource(FINISH_SOURCE))
+        val created = RouteSources(
+            GeoJsonSource(ROUTE_SOURCE),
+            GeoJsonSource(START_SOURCE),
+            GeoJsonSource(FINISH_SOURCE),
+            GeoJsonSource(VISITS_SOURCE),
+        )
         style.addSource(created.route)
         style.addSource(created.start)
         style.addSource(created.finish)
+        style.addSource(created.visits)
         style.addLayer(
             LineLayer("route-line", ROUTE_SOURCE).withProperties(
                 PropertyFactory.lineColor("#1A73E8"),
@@ -51,13 +73,29 @@ fun TripRouteMap(route: List<RoutePoint>, showFinish: Boolean, modifier: Modifie
                 PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             ),
         )
+        // Visits sit below start/finish: a haloed purple dot, distinct in shape and color.
+        style.addLayer(
+            CircleLayer("route-visit-halo", VISITS_SOURCE).withProperties(
+                PropertyFactory.circleRadius(14f),
+                PropertyFactory.circleColor(VISIT_COLOR),
+                PropertyFactory.circleOpacity(0.25f),
+            ),
+        )
+        style.addLayer(
+            CircleLayer("route-visit-dot", VISITS_SOURCE).withProperties(
+                PropertyFactory.circleRadius(6f),
+                PropertyFactory.circleColor(VISIT_COLOR),
+                PropertyFactory.circleStrokeWidth(2f),
+                PropertyFactory.circleStrokeColor("#FFFFFF"),
+            ),
+        )
         style.addLayer(markerLayer("route-start-dot", START_SOURCE, "#1E8E3E"))
         style.addLayer(markerLayer("route-finish-dot", FINISH_SOURCE, "#D93025"))
         sources = created
         map = loadedMap
     }
 
-    LaunchedEffect(route, showFinish, map, sources) {
+    LaunchedEffect(route, visits, showFinish, map, sources) {
         val currentMap = map ?: return@LaunchedEffect
         val current = sources ?: return@LaunchedEffect
         val points = route.map { Point.fromLngLat(it.longitude, it.latitude) }
@@ -65,6 +103,11 @@ fun TripRouteMap(route: List<RoutePoint>, showFinish: Boolean, modifier: Modifie
         current.route.setGeoJson(featuresOf(if (points.size >= 2) LineString.fromLngLats(points) else null))
         current.start.setGeoJson(featuresOf(points.firstOrNull()))
         current.finish.setGeoJson(featuresOf(points.lastOrNull()?.takeIf { showFinish && points.size >= 2 }))
+        current.visits.setGeoJson(
+            FeatureCollection.fromFeatures(
+                visits.map { Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)) },
+            ),
+        )
 
         // Set the camera once so a live route does not fight the user's panning.
         if (!cameraSet) {
@@ -85,6 +128,16 @@ fun TripRouteMap(route: List<RoutePoint>, showFinish: Boolean, modifier: Modifie
             }
             cameraSet = true
         }
+    }
+
+    LaunchedEffect(focus, map) {
+        val currentMap = map ?: return@LaunchedEffect
+        val target = focus ?: return@LaunchedEffect
+        currentMap.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(LatLng(target.center.latitude, target.center.longitude), MapConfig.FOLLOW_ZOOM),
+        )
+        // The initial fit must not override a visit the user picked before the style loaded.
+        cameraSet = true
     }
 }
 

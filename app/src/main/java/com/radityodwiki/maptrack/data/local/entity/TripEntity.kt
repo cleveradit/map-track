@@ -20,6 +20,8 @@ data class TripEntity(
     @ColumnInfo(name = "max_speed") val maxSpeed: Double?,
     val status: String,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    /** Visit algorithm version the trip's visits were computed with; 0 = not yet (PRD §38 Fase 2). */
+    @ColumnInfo(name = "visit_detection_version", defaultValue = "0") val visitDetectionVersion: Int = 0,
 )
 
 fun TripEntity.toDomain() = Trip(

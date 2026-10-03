@@ -1,6 +1,6 @@
 # Product Requirements Document — Map Track
 
-**Versi:** 2.2 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
+**Versi:** 2.3 (2026-10-03). Scope project adalah produk penuh yang dikerjakan dalam 9 fase (§6). Daftar perubahan ada di [§45 Riwayat Revisi](#45-riwayat-revisi).
 
 ## 1. Ringkasan Produk
 
@@ -69,7 +69,7 @@ Frekuensi pengambilan lokasi dapat diatur pengguna mulai Fase 4.
 
 ### Bertahap
 
-Setiap fase fokus pada scope-nya dan harus stabil sebelum fase berikutnya dimulai. Fitur kompleks (cloud, grup, live sharing) tidak dikerjakan sebelum fondasi tracking lokal stabil.
+Setiap fase fokus pada scope-nya dan harus selesai (seluruh tiket selesai, unit test, build, dan lint lulus) sebelum fase berikutnya dimulai. Uji manual di HP dilakukan sekali setelah seluruh fase selesai, mengikuti checklist uji manual setiap fase. Fitur kompleks (cloud, grup, live sharing) tidak dikerjakan sebelum fondasi tracking lokal stabil.
 
 Keputusan teknis pada fase awal tetap memperhitungkan kebutuhan fase akhir agar tidak memerlukan perombakan besar. Contohnya, ID trip berupa UUID sejak Fase 1 agar siap untuk sync (§24).
 
@@ -2066,6 +2066,12 @@ PRD ini menjadi dasar implementasi seluruh fase. Sebelum sebuah fase dimulai, de
 ---
 
 # 45. Riwayat Revisi
+
+## v2.3 — 2026-10-03
+
+| Bagian | Perubahan | Alasan |
+|---|---|---|
+| §3 Bertahap | Syarat lanjut ke fase berikutnya: fase sebelumnya selesai dengan unit test, build, dan lint lulus. Uji manual di HP dilakukan sekali setelah semua fase selesai, bukan di akhir setiap fase | Keputusan pemilik produk: pengujian manual dikumpulkan di akhir |
 
 ## v2.2 — 2026-10-03
 

@@ -60,6 +60,9 @@
 
     <string name="route_not_enough_data">Data lokasi tidak cukup untuk menggambar rute.</string>
 
+    <string name="visits_title">Tempat singgah</string>
+    <string name="visit_label">Tempat singgah · %1$s</string>
+
     <string name="interrupted_title">Perjalanan sebelumnya tidak selesai dengan normal.</string>
     <string name="label_last_data">Data terakhir</string>
     <string name="end_trip">Akhiri Trip</string>

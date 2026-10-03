@@ -69,7 +69,7 @@ All AI agents MUST read and follow these rules before proposing or implementing 
 
 **Rule 7 — Permissions:** Explain why location access is needed before requesting it; precise location is required, `ACCESS_BACKGROUND_LOCATION` is requested only when the user enables opt-in automatic trips (Phase 5) — manual tracking and Live Sharing never need it; history must remain usable when permission is denied.
 
-**Rule 8 — Scope:** Work phase by phase (PRD §6); do not start a phase before its detail in PRD §38 is completed and the previous phase is stable. Never implement anything in PRD §37 (Out of Scope) without revising the PRD first.
+**Rule 8 — Scope:** Work phase by phase (PRD §6); do not start a phase before its detail in PRD §38 is completed and the previous phase is complete: all its tickets `DONE` with `testDebugUnitTest`, `assembleDebug`, and `lintDebug` passing. Manual testing on the phone is NOT a gate between phases: the user tests manually only once, after all phases (1–9) are finished. Each phase closeout ticket still writes its manual checklist so the final test can follow them in order. Never implement anything in PRD §37 (Out of Scope) without revising the PRD first.
 
 **Rule 9 — Sync-ready IDs:** Trip IDs are client-generated UUID strings and `trips.updated_at` is maintained from Phase 1, so Phase 7 sync needs no primary-key migration. Location points are append-only and unique on (`trip_id`, `recorded_at`).
 
@@ -95,7 +95,7 @@ All AI agents MUST read and follow these rules before proposing or implementing 
 
 **Notes**
 
-- Device testing is done by the user on a physical phone; no emulator is set up on the dev machine.
+- Device testing is done by the user on a physical phone, once after all phases are finished (Rule 8); no emulator is set up on the dev machine.
 - The first build downloads dependencies into `~/.gradle` and takes several minutes.
 
 ---

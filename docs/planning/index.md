@@ -6,7 +6,7 @@ Status meanings (`DRAFT` / `REVIEW` / `READY` / `DONE`): see [ai-context.md §5 
 
 ## Execution Order
 
-_No active tickets. Completed tickets are moved to `Ticket-Implemented/`._
+— (Tidak ada tiket aktif. Fase 2 selesai: TICKET-012–016 di `Ticket-Implemented/`. Fase 3 `OPEN` di [backlog](../backlog.md), siap dijadikan tiket mulai TICKET-017.)
 
 ## Global Agent Rules
 

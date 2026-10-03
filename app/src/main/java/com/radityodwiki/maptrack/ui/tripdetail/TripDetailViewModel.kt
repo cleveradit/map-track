@@ -21,6 +21,8 @@ sealed interface TripDetailUiState {
         val pointCount: Int,
         val samples: List<SpeedSample>,
         val route: List<RoutePoint>,
+        /** Always empty while the trip is active (PRD §38 Fase 2). */
+        val visits: List<VisitItem>,
     ) : TripDetailUiState
 }
 
@@ -30,15 +32,18 @@ class TripDetailViewModel(tripId: String, repository: TripRepository) : ViewMode
     val uiState: StateFlow<TripDetailUiState> = combine(
         repository.observeTrip(tripId),
         repository.observePoints(tripId),
-    ) { trip, points ->
+        repository.observeVisits(tripId),
+    ) { trip, points, visits ->
         if (trip == null) {
             TripDetailUiState.NotFound
         } else {
+            val summary = trip.toSummary()
             TripDetailUiState.Loaded(
-                summary = trip.toSummary(),
+                summary = summary,
                 pointCount = points.size,
                 samples = speedSeries(points, trip.startedAt),
                 route = points.map { it.toRoutePoint() },
+                visits = if (summary.isActive) emptyList() else visits.map { it.toVisitItem() },
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TripDetailUiState.Loading)

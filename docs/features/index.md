@@ -13,4 +13,5 @@ For a full understanding, start with [architecture.md](../architecture.md) and [
 | [home](home.md) | Status GPS, posisi, kecepatan, akurasi, dan alur izin lokasi | `app/src/main/java/com/radityodwiki/maptrack/ui/home/` |
 | [tracking](tracking.md) | Start/Stop trip, foreground service, filter dan penyimpanan titik, notification | `app/src/main/java/com/radityodwiki/maptrack/location/` |
 | [history](history.md) | Daftar trip terbaru di atas dan hapus trip dengan konfirmasi | `app/src/main/java/com/radityodwiki/maptrack/ui/history/` |
-| [trip-detail](trip-detail.md) | Ringkasan statistik trip dan grafik kecepatan | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/` |
+| [trip-detail](trip-detail.md) | Ringkasan statistik trip, tempat singgah, peta rute, dan grafik kecepatan | `app/src/main/java/com/radityodwiki/maptrack/ui/tripdetail/` |
+| [place-detection](place-detection.md) | Deteksi visit (diam ≥ 5 menit dalam 100 m) saat trip selesai dan backfill trip lama | `app/src/main/java/com/radityodwiki/maptrack/domain/usecase/VisitDetector.kt` |

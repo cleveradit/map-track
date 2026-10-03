@@ -4,7 +4,7 @@ Documentation hub for the Map Track project (offline-first Android location & tr
 
 **Stack:** Kotlin · Jetpack Compose · Room · Fused Location Provider · Foreground Service · MapLibre (Android) · Laravel backend from Phase 6
 
-**Status:** Fase 1 (Core Tracking Lokal) selesai diimplementasikan (TICKET-001–011); menunggu uji manual di HP — checklist di [TICKET-011](planning/Ticket-Implemented/TICKET-011-phase1-closeout.md#6a-checklist-uji-manual-fase-1-gabungan-untuk-user). Detail Fase 2–9 sudah lengkap di PRD §38 (v2.2); item per fase ada di [backlog.md](backlog.md), Fase 2 (Place Detection) siap dijadikan tiket.
+**Status:** Fase 1 (Core Tracking Lokal, TICKET-001–011) dan Fase 2 (Place Detection, TICKET-012–016) selesai diimplementasikan. Uji manual di HP dilakukan sekali setelah semua fase selesai — checklist sejauh ini: [Fase 1](planning/Ticket-Implemented/TICKET-011-phase1-closeout.md#6a-checklist-uji-manual-fase-1-gabungan-untuk-user) dan [Fase 2](planning/Ticket-Implemented/TICKET-016-phase2-closeout.md#6a-checklist-uji-manual-fase-2-untuk-user). Detail Fase 3–9 ada di PRD §38 dan [backlog.md](backlog.md); Fase 3 siap dijadikan tiket.
 
 ## Start here
 

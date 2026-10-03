@@ -16,7 +16,7 @@ Pengguna memulai dan menghentikan trip dari Home. Selama trip aktif, `LocationTr
 | Notification | `TrackingNotification`, `trackingNotificationText()` | Diperbarui setiap fix dan setiap 5 detik; aksi Stop; tap membuka app |
 | Stop | `TrackingController.stop()` | Service berjalan → `ACTION_STOP`; tidak berjalan → `TripRecorder.finishInterrupted()` |
 | Recovery | `interruptedTripOf()`, dialog di Home | Trip `active` tanpa service → dialog PRD §33 → `endInterruptedTrip()`; `ended_at` = titik terakhir atau `started_at` |
-| Selesai | `TripRepository.finishTrip()` | Statistik dari titik tersimpan, `ended_at` = waktu Stop, idempoten |
+| Selesai | `TripRepository.finishTrip()` | Statistik dan visit ([place-detection.md](place-detection.md)) dari titik tersimpan dalam satu transaksi, `ended_at` = waktu Stop, idempoten |
 
 | `StartTrackingError` | Penyebab | Pesan di Home |
 |---|---|---|

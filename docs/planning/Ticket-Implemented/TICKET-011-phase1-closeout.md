@@ -86,6 +86,8 @@ Hasil: `testDebugUnitTest` 73/73 lulus, `assembleDebug` sukses, lint 0 error dan
 
 ## 6a. Checklist Uji Manual Fase 1 (gabungan, untuk user)
 
+Checklist ini dijalankan user sekali bersama checklist fase lain setelah semua fase selesai, bukan di akhir fase ini (ai-context Rule 8, PRD v2.3).
+
 Instal: `./gradlew installDebug` dengan HP terhubung (USB debugging aktif).
 
 | # | Langkah | Hasil yang diharapkan | Tiket |
